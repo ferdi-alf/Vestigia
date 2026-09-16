@@ -7,7 +7,7 @@ import { HeritageViewer } from "@/components/three/heritage-viewer";
 import { buttonClass } from "@/components/ui/button";
 import { useI18n } from "@/lib/i18n/client";
 import { useMotionTier } from "@/lib/motion/use-motion-tier";
-import { EASE, gsap, useScrollScene } from "@/lib/motion/use-scroll-scene";
+import { EASE, ScrollTrigger, gsap, useScrollScene } from "@/lib/motion/use-scroll-scene";
 import { BeamField, type BeamLink } from "@/concepts/shell/beam";
 import { MetadataChip } from "@/concepts/shell/metadata-chip";
 import { A_COPY } from "./copy";
@@ -75,6 +75,14 @@ export function Relic({ heritage }: { heritage: Heritage }) {
   const tier = useMotionTier();
   const [built, setBuilt] = useState(false);
 
+  /* Apakah section ini sudah jauh terlewat.
+
+     Bukan gerbang "boleh menggambar" melainkan gerbang "boleh ADA". Section
+     Dunia di bawah memasang globe relief dengan kanvasnya sendiri; membiarkan
+     penampil ini terpasang berarti dua konteks WebGL hidup pada satu halaman,
+     dan §7 menuntut satu. */
+  const [released, setReleased] = useState(false);
+
   const [lat, lon] = heritage.coordinates;
   const coordinate = `${Math.abs(lat).toFixed(2)}°${lat >= 0 ? "N" : "S"}  ${Math.abs(lon).toFixed(2)}°${lon >= 0 ? "E" : "W"}`;
 
@@ -87,6 +95,18 @@ export function Relic({ heritage }: { heritage: Heritage }) {
         setBuilt(true);
         return;
       }
+
+      /* `start`/`end` sengaja selebar mungkin: yang ditunggu bukan "section
+         keluar viewport" melainkan "section benar-benar jauh", supaya penampil
+         tidak dilepas-pasang tiap kali pengunjung menggulir bolak-balik di
+         perbatasannya. Menembak sekali per lintasan, bukan tiap frame. */
+      ScrollTrigger.create({
+        trigger: node,
+        start: "top bottom",
+        end: "bottom top",
+        onLeave: () => setReleased(true),
+        onEnterBack: () => setReleased(false),
+      });
 
       gsap.set("[data-obj-card]", { opacity: 0 });
 
@@ -155,6 +175,7 @@ export function Relic({ heritage }: { heritage: Heritage }) {
                 defer
                 initialAutoRotate
                 initialHotspots={false}
+                released={released}
                 idleLabel={dict.landing.stageIdle}
               />
             </div>

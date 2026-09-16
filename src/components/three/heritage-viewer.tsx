@@ -69,6 +69,7 @@ export function HeritageViewer({
   idleLabel,
   initialAutoRotate = false,
   initialHotspots = true,
+  released = false,
 }: {
   heritage: Heritage;
   defer?: boolean;
@@ -96,13 +97,26 @@ export function HeritageViewer({
    * object berarti dua sistem keterangan bersaing pada bingkai yang sama.
    */
   initialHotspots?: boolean;
+  /**
+   * Lepaskan panggungnya sama sekali, bukan cuma hentikan.
+   *
+   * Bawaannya `false`, dan di halaman warisan ia memang harus begitu: melepas
+   * panggung di sana berarti membuang sudut kamera yang baru saja diatur
+   * pengguna. Di landing sebaliknya — section di bawahnya memasang kanvasnya
+   * sendiri, dan §7 menuntut satu konteks WebGL per halaman.
+   *
+   * Melepasnya murah: `useGLTF` meng-cache GLB yang sudah terurai secara global
+   * dan cache itu bertahan melewati unmount, jadi memasang ulang tidak
+   * mengunduh atau mengurai apa pun lagi.
+   */
+  released?: boolean;
 }) {
   const { locale, dict } = useI18n();
   const controlsRef = useRef<OrbitControlsImpl | null>(null);
   const shellRef = useRef<HTMLDivElement>(null);
   const [viewRef, { active, entered }] = useInView<HTMLDivElement>({ rootMargin: "300px" });
 
-  const mounted = !defer || entered;
+  const mounted = (!defer || entered) && !released;
 
   const [showHotspots, setShowHotspots] = useState(initialHotspots);
   const [autoRotate, setAutoRotate] = useState(initialAutoRotate);
