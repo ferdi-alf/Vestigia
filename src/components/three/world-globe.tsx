@@ -33,14 +33,33 @@ const RADIUS = 1;
  */
 const SEGMENTS: [number, number] = [256, 128];
 
-/** Seberapa tinggi daratan menonjol, satuan radius. */
-const RELIEF = 0.028;
+/**
+ * Seberapa tinggi daratan menonjol, satuan radius.
+ *
+ * Dinaikkan dari 0,028 setelah melihatnya: pada nilai itu bolanya terbaca rata
+ * dan benua praktis tidak ada. Relief hanya terbaca lewat BAYANGAN yang
+ * dijatuhkannya, dan bayangan sedalam tiga persen radius di bawah cahaya yang
+ * nyaris tegak lurus tidak menghasilkan apa pun.
+ *
+ * Dinaikkan lagi ke 0,075 setelah pass kedua: pada 0,055 siluetnya memang
+ * bergerigi tetapi benua di tengah bingkai masih rata. Tujuh setengah persen
+ * radius adalah titik tempat tepi benua mulai menjatuhkan bayangan yang
+ * benar-benar terbaca sebagai tepi.
+ */
+const RELIEF = 0.075;
 
 /** Derajat per detik saat bola berputar bebas. */
 const SPIN_SPEED = 4.2;
 
-/** Jarak kamera dari pusat, satuan radius. */
-const DISTANCE = 3.05;
+/**
+ * Jarak kamera dari pusat, satuan radius.
+ *
+ * Dinaikkan dari 3,05: pada fov 34 jarak itu membuat setengah tinggi bingkai
+ * cuma 0,93 radius — lebih kecil daripada bolanya sendiri, jadi ia terpotong di
+ * keempat sisi wadahnya. Sebuah bola yang terpotong berhenti terbaca sebagai
+ * bola, dan seluruh gagasan globe ikut hilang bersamanya.
+ */
+const DISTANCE = 4.0;
 
 /**
  * Lintang kamera dijepit di sini saat sebuah benua dipilih.
@@ -102,8 +121,7 @@ function ReliefBody({
   const maps = useMemo(() => createReliefMaps(), []);
   useEffect(
     () => () => {
-      maps?.displacementMap.dispose();
-      maps?.bumpMap.dispose();
+      maps?.height.dispose();
     },
     [maps],
   );
@@ -139,10 +157,20 @@ function ReliefBody({
             kalau paletnya bergeser. §5: batu kering, bukan kaca atau neon. */}
         <meshStandardMaterial
           color={stone}
-          displacementMap={maps?.displacementMap ?? undefined}
+          displacementMap={maps?.height ?? undefined}
           displacementScale={RELIEF}
-          bumpMap={maps?.bumpMap ?? undefined}
-          bumpScale={0.012}
+          /* Peta yang SAMA, dan itu yang membuat reliefnya terlihat — lihat
+             catatan di `ReliefMaps`. Tanpa ini cahaya menaungi bola seolah
+             masih bulat sempurna dan seluruh displacement jadi sia-sia. */
+          bumpMap={maps?.height ?? undefined}
+          /* Satu, bukan sepersekian.
+
+             `bumpScale` BUKAN satuan dunia — ia pengali gangguan normal, dan
+             bawaannya three.js sendiri 1. Nilai sepersekian yang benar untuk
+             `displacementScale` di baris atas justru mematikan bump sama
+             sekali: bolanya kembali mulus dan seluruh benua lenyap. Dua
+             properti bertetangga dengan satuan yang sama sekali berbeda. */
+          bumpScale={1}
           roughness={0.94}
           metalness={0}
         />
@@ -359,9 +387,16 @@ export function WorldGlobe({
         >
           {/* Matahari dari kiri, posisi yang sama dengan seluruh situs. Relief
               hanya terbaca kalau cahayanya menyapu, bukan menyorot tegak. */}
-          <hemisphereLight args={["#fff3e0", "#c9b79a", 0.55]} />
-          <directionalLight position={[-3.4, 2.2, 2.6]} intensity={2.5} />
-          <directionalLight position={[3, 0.6, -2]} intensity={0.3} />
+          {/* Cahaya MENYAPU, bukan menyorot.
+
+              Sumber yang hampir tegak lurus permukaan menerangi puncak dan
+              lembah sama rata, dan relief setinggi apa pun jadi tidak terbaca.
+              Yang membuat batu terbaca sebagai batu adalah bayangan panjang
+              dari sumber yang rendah — persis bahasa cahaya yang sudah dipakai
+              seluruh situs ini: rendah, hangat, dari kiri. */}
+          <hemisphereLight args={["#fff3e0", "#b9a88a", 0.32]} />
+          <directionalLight position={[-4.2, 0.9, 1.4]} intensity={3.1} />
+          <directionalLight position={[2.4, 0.4, -1.8]} intensity={0.25} />
 
           <ReliefBody
             marks={marks}

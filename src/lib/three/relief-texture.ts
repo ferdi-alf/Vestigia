@@ -36,10 +36,21 @@ import { WORLD_LAND_PATH } from "@/data/world-outline";
  */
 
 export interface ReliefMaps {
-  /** ketinggian sungguhan — menggeser verteks, mengubah siluet */
-  displacementMap: Texture;
-  /** butiran batu — cahaya saja, tidak menggeser apa pun */
-  bumpMap: Texture;
+  /**
+   * SATU peta, dipakai dua slot sekaligus — `displacementMap` DAN `bumpMap`.
+   *
+   * Ini bukan penghematan melainkan syarat, dan ia jenis jebakan yang hanya
+   * ketahuan dengan melihat layar: **three.js tidak menghitung ulang normal
+   * setelah `displacementMap` menggeser verteks.** Bola yang geometrinya sudah
+   * berbenjol-benjol tetap dinaungi seolah masih bulat sempurna, jadi siluetnya
+   * berubah sementara permukaannya tetap rata — hasilnya telur bergelombang,
+   * bukan dunia.
+   *
+   * `bumpMap` yang membawa peta ketinggian yang SAMA memperbaikinya: ia
+   * memutar normal per piksel mengikuti kemiringan yang sama, sehingga cahaya
+   * akhirnya melihat bentuk yang benar-benar ada di sana.
+   */
+  height: Texture;
 }
 
 /**
@@ -52,8 +63,15 @@ export interface ReliefMaps {
 const WIDTH = 1024;
 const HEIGHT = 512;
 
-/** Berapa banyak butir batu ditaburkan ke peta bump. */
-const GRAIN = 26000;
+/**
+ * Berapa banyak butir batu ditaburkan ke peta ketinggian.
+ *
+ * Diturunkan tajam dari 26.000. Sejak peta ini juga jadi `bumpMap`, tiap butir
+ * ikut memutar normal — dan pada kerapatan lama butirannya MENELAN benua:
+ * bolanya terbaca berpasir merata dan garis pantainya hilang di dalam derau.
+ * Butiran harus terdengar seperti bisikan di bawah bentuk, bukan menggantikannya.
+ */
+const GRAIN = 7000;
 
 function surface(): { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D } | null {
   if (typeof document === "undefined") return null;
@@ -77,17 +95,15 @@ function finish(canvas: HTMLCanvasElement): Texture {
   return texture;
 }
 
-function paint(): { height: HTMLCanvasElement; grain: HTMLCanvasElement } | null {
+function paint(): HTMLCanvasElement | null {
   const height = surface();
-  const grain = surface();
-  if (!height || !grain) return null;
+  if (!height) return null;
 
   const scale = WIDTH / 360;
   const land = new Path2D(WORLD_LAND_PATH);
-
-  /* ── Peta ketinggian ───────────────────────────────────────────────
-     Laut hitam, daratan putih, dan DI ANTARANYA yang penting. */
   const h = height.ctx;
+
+  /* Laut hitam, daratan putih, dan DI ANTARANYA yang penting. */
   h.fillStyle = "#000000";
   h.fillRect(0, 0, WIDTH, HEIGHT);
 
@@ -100,10 +116,15 @@ function paint(): { height: HTMLCanvasElement; grain: HTMLCanvasElement } | null
      pantai — daratan terbaca seperti kue yang dicetak, bukan seperti benua.
      Berlapis begini, tepinya melandai keluar seperti landas kontinen dan
      pedalamannya berdiri paling tinggi. `evenodd` wajib: tanpanya laut
-     pedalaman seperti Kaspia ikut terisi. */
+     pedalaman seperti Kaspia ikut terisi.
+
+     Blur-nya dalam ruang yang SUDAH diskalakan 2,84x, jadi angka di sini
+     bukan piksel kanvas melainkan derajat — `blur: 2.6` berarti sekitar tujuh
+     piksel. Nilai yang lebih besar melembutkan pantai sampai benua kehilangan
+     bentuknya. */
   const shelves: { blur: number; alpha: number }[] = [
-    { blur: 5, alpha: 0.42 },
-    { blur: 2.2, alpha: 0.34 },
+    { blur: 1.6, alpha: 0.42 },
+    { blur: 0.6, alpha: 0.34 },
     { blur: 0, alpha: 0.24 },
   ];
 
@@ -118,38 +139,22 @@ function paint(): { height: HTMLCanvasElement; grain: HTMLCanvasElement } | null
   h.globalAlpha = 1;
   h.restore();
 
-  /* ── Peta butiran ──────────────────────────────────────────────────
-     Kelabu tengah supaya cahaya punya titik netral untuk menyimpang ke dua
-     arah, lalu ditaburi butir terang dan gelap. Tanpa ini bolanya licin, dan
-     batu yang licin berhenti terbaca sebagai batu. */
-  const g = grain.ctx;
-  g.fillStyle = "#808080";
-  g.fillRect(0, 0, WIDTH, HEIGHT);
+  /* Butiran batu dikomposit KE DALAM peta yang sama, beramplitudo kecil.
 
+     Kanvas kedua tidak dipakai lagi: karena `bumpMap` dan `displacementMap`
+     kini berbagi satu peta, butiran yang tinggal di peta terpisah tidak punya
+     tempat untuk mendarat. Amplitudonya sengaja jauh di bawah tinggi benua —
+     ia harus terbaca sebagai permukaan batu, bukan sebagai pegunungan. */
   for (let i = 0; i < GRAIN; i += 1) {
     const x = Math.random() * WIDTH;
     const y = Math.random() * HEIGHT;
-    const light = Math.random() > 0.5;
-    g.fillStyle = light ? "#ffffff" : "#000000";
-    g.globalAlpha = 0.05 + Math.random() * 0.12;
-    g.fillRect(x, y, 1 + Math.random() * 1.6, 1 + Math.random() * 1.6);
+    h.fillStyle = Math.random() > 0.5 ? "#ffffff" : "#000000";
+    h.globalAlpha = 0.012 + Math.random() * 0.022;
+    h.fillRect(x, y, 1 + Math.random() * 1.6, 1 + Math.random() * 1.6);
   }
-  g.globalAlpha = 1;
+  h.globalAlpha = 1;
 
-  /* Garis pantai ditekankan pada peta butiran, bukan pada peta ketinggian.
-     Di sana ia akan menaikkan tepinya jadi tanggul; di sini ia cuma membuat
-     cahaya berbelok, dan itulah yang membuat pantai terbaca sebagai tepi
-     terpahat — motif `carved-edge`. */
-  g.save();
-  g.scale(scale, scale);
-  g.strokeStyle = "#ffffff";
-  g.globalAlpha = 0.5;
-  g.lineWidth = 0.7;
-  g.stroke(land);
-  g.restore();
-  g.globalAlpha = 1;
-
-  return { height: height.canvas, grain: grain.canvas };
+  return height.canvas;
 }
 
 /**
@@ -165,13 +170,10 @@ function paint(): { height: HTMLCanvasElement; grain: HTMLCanvasElement } | null
  * ditawar. Kanvas di belakangnya tidak memegang apa pun, jadi ia boleh hidup
  * lebih lama dan dipakai lagi saat section dipasang ulang.
  */
-let painted: { height: HTMLCanvasElement; grain: HTMLCanvasElement } | null = null;
+let painted: HTMLCanvasElement | null = null;
 
 export function createReliefMaps(): ReliefMaps | null {
   if (!painted) painted = paint();
   if (!painted) return null;
-  return {
-    displacementMap: finish(painted.height),
-    bumpMap: finish(painted.grain),
-  };
+  return { height: finish(painted) };
 }

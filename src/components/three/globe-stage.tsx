@@ -39,8 +39,15 @@ export interface GlobeMark {
 
 const GLOBE_RADIUS = 1;
 
-/** Seberapa jauh globe digeser ke kanan, pecahan jarak kamera. */
-const RIGHT_BIAS = 0.26;
+/**
+ * Seberapa jauh globe digeser ke kanan, pecahan jarak kamera.
+ *
+ * Dinaikkan dari 0,26 setelah melihatnya: pada nilai lama tepi kiri bola
+ * menabrak baris kedua judul. Karena geserannya sebanding dengan jarak kamera,
+ * pecahannya terhadap lebar layar tetap sama pada setiap ketinggian — jadi satu
+ * angka ini berlaku sepanjang sekuens, bukan cuma pada bingkai pembuka.
+ */
+const RIGHT_BIAS = 0.32;
 
 /**
  * Lebar jendela nyala/padam tiap penanda, dalam satuan progres keadaan.
@@ -254,6 +261,7 @@ function Marker({
     if (!node || !mat) return;
 
     const t = progress.current?.value ?? 0;
+    const intro = progress.current?.intro ?? 1;
 
     /* Penanda di sisi jauh bola harus hilang, kalau tidak lima belas titik
        terbaca menembus bumi dan bolanya berhenti terlihat padat. */
@@ -264,13 +272,20 @@ function Marker({
     toCamera.copy(camera.position).sub(worldPosition).normalize();
     const facing = Math.max(0, worldNormal.dot(toCamera));
 
+    /* Menyala bersama animasi MASUK, bukan menunggu gulir.
+
+       Sebelumnya ini dipetakan ke `arrive`, yang berarti pada progres nol
+       seluruh penanda masih padam — bingkai pertama yang dilihat pengunjung
+       berisi bola telanjang, dan "lima belas situs" baru terbukti setelah ia
+       menggulir. Sekarang mereka menyala barat ke timur selama tween masuk,
+       jadi janji halamannya sudah berdiri sebelum jari menyentuh apa pun. */
     const start = offset * (1 - MARK_SPAN);
-    const lit = Math.min(1, Math.max(0, (stateProgress(t, "arrive") - start) / MARK_SPAN));
+    const lit = Math.min(1, Math.max(0, (intro - start) / MARK_SPAN));
     const dark = isTarget
       ? 0
       : Math.min(1, Math.max(0, (stateProgress(t, "hand") - start) / MARK_SPAN));
 
-    mat.opacity = (progress.current?.intro ?? 1) * lit * (1 - dark) * Math.min(1, facing * 2.2);
+    mat.opacity = lit * (1 - dark) * Math.min(1, facing * 2.2);
 
     /* Yang bertahan membesar saat yang lain pergi. Tanpa itu, bingkai terakhir
        hanya berisi satu titik yang kebetulan tidak padam — bukan satu titik

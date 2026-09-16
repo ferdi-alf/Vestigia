@@ -59,20 +59,21 @@ export type StateName = keyof typeof STATE;
 /**
  * Ketinggian kamera, pengali radius globe.
  *
- * 4,0 pada pembuka adalah jawaban atas "jangan terlalu besar": pada fov 42
- * ketinggian itu membuat bola setinggi sekitar dua pertiga viewport, cukup untuk
- * jadi subjek tanpa menghimpit kolom teks di kiri.
+ * 4,8 pada pembuka adalah jawaban atas "jangan terlalu besar", dan angkanya
+ * diukur di peramban bukan ditebak: pada 4,0 bola mengisi 72% tinggi viewport
+ * dan tepi kirinya menabrak baris kedua judul. Pada 4,8 ia sekitar 54% — masih
+ * jelas subjek, tetapi kolom teks di kiri punya ruangnya sendiri.
  *
- * Turun ke 2,05 sepanjang `close`. Itu yang dibaca sebagai zoom — dan ia
+ * Turun ke 2,4 sepanjang `close`. Itu yang dibaca sebagai zoom — dan ia
  * mendekat, bukan menjauh, karena benda yang membesar terbaca sebagai pengunjung
  * yang terus bergerak sementara benda yang mengecil terbaca sebagai benda yang
  * ditinggalkan.
  */
 export const ALTITUDE: readonly { at: number; value: number }[] = [
-  { at: 0.0, value: 4.0 },
-  { at: STATE.turn.to, value: 3.6 },
-  { at: STATE.close.to, value: 2.1 },
-  { at: 1.0, value: 2.0 },
+  { at: 0.0, value: 4.8 },
+  { at: STATE.turn.to, value: 4.3 },
+  { at: STATE.close.to, value: 2.4 },
+  { at: 1.0, value: 2.3 },
 ];
 
 /**
