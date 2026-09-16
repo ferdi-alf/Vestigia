@@ -88,7 +88,7 @@ export default async function HeritagePage({ params }: Props) {
     <div data-concept="a" className="concept-ground">
       <div className="mx-auto w-full max-w-[112rem] px-3 pt-5 pb-10 sm:px-4">
         <Link
-          href="/#peta"
+          href="/#dunia"
           className="inline-flex items-center gap-2 py-2 text-sm text-ink-muted transition-colors hover:text-ink"
         >
           <span aria-hidden="true">←</span>

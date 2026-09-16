@@ -13,17 +13,19 @@ const SOLID_AFTER = 60;
 export type NavVariant = "a" | "b" | "c";
 
 /**
- * Anchor dalam halaman, bukan tautan lintas-halaman.
+ * Dua anchor, ABSOLUT dari akar.
  *
- * Tiap konsep adalah landing yang UTUH — seluruh ceritanya ada di satu
- * halaman — jadi navbar yang menunjuk keluar akan berbohong tentang di mana
- * isinya berada. Ini juga yang memberi navbar konsep C pembacaan posisi yang
- * nyata: ada sesuatu untuk ditunjuk.
+ * Absolut dan bukan `#yang-hilang` telanjang karena navbar yang sama dipakai
+ * `/heritage/[slug]`. Anchor relatif di sana menunjuk elemen di halaman ITU,
+ * yang tidak ada — jadi tautannya mati justru di halaman tempat orang paling
+ * mungkin ingin kembali.
+ *
+ * Tinggal dua karena landing tinggal tiga babak, dan babak pertama tidak butuh
+ * tautan: ia yang sedang dilihat saat navbar pertama kali terbaca.
  */
 const LINKS = [
-  { href: "#peta", key: "explore" },
-  { href: "#pemandu", key: "guide" },
-  { href: "#tentang", key: "about" },
+  { href: "/#yang-hilang", key: "lost" },
+  { href: "/#dunia", key: "explore" },
 ] as const;
 
 /**
@@ -43,7 +45,22 @@ const LINKS = [
  * berubah dua kali seumur halaman tidak layak merender ulang pohon komponen
  * setiap kali jari bergerak, jadi ia ditulis ke `dataset` lewat rAF.
  */
-export function FloatingNav({ variant }: { variant: NavVariant }) {
+export function FloatingNav({
+  variant,
+  ctaHref = "/#dunia",
+}: {
+  variant: NavVariant;
+  /**
+   * Tujuan tombol ajakan.
+   *
+   * Prop, bukan konstanta, karena tujuannya adalah halaman object warisan
+   * unggulan — dan slug-nya datang dari registry lewat `featuredHeritage()`.
+   * Memakunya di sini berarti navbar memutuskan situs mana yang unggulan, yang
+   * bukan urusannya. Bawaannya section Dunia, supaya konsep B dan C yang tidak
+   * mengirimnya tetap mendarat di suatu tempat yang nyata.
+   */
+  ctaHref?: string;
+}) {
   const { dict } = useI18n();
   const ref = useRef<HTMLElement>(null);
   const progressRef = useRef<HTMLSpanElement>(null);
@@ -157,7 +174,7 @@ export function FloatingNav({ variant }: { variant: NavVariant }) {
                     "rounded-lg px-3 py-2 text-sm text-ink-muted hover:bg-raised hover:text-ink",
                 )}
               >
-                {link.key === "guide" ? dict.ai.guide : dict.nav[link.key]}
+                {dict.nav[link.key]}
               </Link>
             </li>
           ))}
@@ -181,7 +198,7 @@ export function FloatingNav({ variant }: { variant: NavVariant }) {
           ) : null}
 
           <Link
-            href="#tujuan"
+            href={ctaHref}
             className={cn(
               variant === "b"
                 ? "text-[0.72rem] tracking-[0.16em] text-gold-dim underline-offset-4 uppercase hover:underline"

@@ -2,10 +2,8 @@ import { HERITAGE, featuredHeritage } from "@/data/registry";
 import { ConceptFrame } from "@/concepts/shell/concept-frame";
 import { Dive } from "@/concepts/a/dive";
 import { Relic } from "@/concepts/a/relic";
-import { Explorer } from "@/concepts/a/explorer";
-import { Guide } from "@/concepts/a/guide";
-import { Gateway } from "@/concepts/a/gateway";
-import { Closing } from "@/concepts/a/closing";
+import { World } from "@/concepts/a/world";
+import { Invite } from "@/concepts/a/invite";
 
 /**
  * Landing — konsep A.
@@ -52,18 +50,13 @@ export default function HomePage() {
     continent: p.continent,
   }));
 
-  /* Proyeksi sempit untuk Bandingkan: peramban tidak pernah menerima lima
-     belas record lengkap hanya supaya sebuah pemilih punya daftar nama. */
-  const all = HERITAGE.map((h) => ({ slug: h.slug, name: h.name, country: h.country }));
 
   return (
-    <ConceptFrame concept="a">
+    <ConceptFrame concept="a" ctaHref={heritage ? `/heritage/${heritage.slug}` : undefined}>
       {heritage ? <Dive heritage={heritage} marks={marks} /> : null}
       {heritage ? <Relic heritage={heritage} /> : null}
-      <Explorer points={points} />
-      {heritage ? <Guide heritage={heritage} all={all} /> : null}
-      <Gateway points={points} />
-      <Closing points={points} />
+      <World points={points} />
+      {heritage ? <Invite heritage={heritage} /> : null}
     </ConceptFrame>
   );
 }

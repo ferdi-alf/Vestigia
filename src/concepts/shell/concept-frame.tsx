@@ -22,14 +22,17 @@ import { FloatingNav, type NavVariant } from "./floating-nav";
  */
 export function ConceptFrame({
   concept,
+  ctaHref,
   children,
 }: {
   concept: NavVariant;
+  /** tujuan tombol ajakan navbar; diteruskan apa adanya ke `FloatingNav` */
+  ctaHref?: string;
   children: React.ReactNode;
 }) {
   return (
     <div data-concept={concept} className="concept-ground relative isolate">
-      <FloatingNav variant={concept} />
+      <FloatingNav variant={concept} ctaHref={ctaHref} />
       {children}
     </div>
   );

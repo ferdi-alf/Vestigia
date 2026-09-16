@@ -58,40 +58,28 @@ export const A_COPY = {
   },
   coordinateLabel: { id: "Koordinat", en: "Coordinates" },
 
-  explorerKicker: { id: "Penjelajah", en: "The explorer" },
-  explorerTitle: {
-    id: "Dan lima belas titik itu masih menyala.",
-    en: "And those fifteen points are still lit.",
+  /* ── Dunia ────────────────────────────────────────────────────────────
+     Section ini menggantikan Penjelajah, Pemandu, Pintu Masuk, dan Penutup
+     sekaligus. Yang dulu butuh empat section — peta, tanya jawab, lima pintu,
+     dan ajakan penutup — di sini jadi satu benda yang bisa diputar dan
+     diklik. */
+  worldKicker: { id: "Yang tersisa", en: "What remains" },
+  worldTitle: {
+    id: "Lima benua, lima belas yang bertahan.",
+    en: "Five continents, fifteen that endured.",
   },
-  explorerLead: {
-    id: "Setiap titik adalah warisan yang benar-benar ada di koleksi ini, lengkap dengan model 3D dan datanya. Tidak ada titik yang menandai sesuatu yang belum siap.",
-    en: "Every point is a site that genuinely exists in this collection, with both a 3D model and its data. No point marks something that is not ready.",
+  worldLead: {
+    id: "Setiap object di bola ini berdiri pada koordinat aslinya, dan setiap satunya punya model 3D yang bisa dibuka. Pilih satu benua untuk memutar dunia ke sana.",
+    en: "Every object on this sphere stands at its real coordinates, and each one has a 3D model you can open. Choose a continent to turn the world toward it.",
   },
+  worldAll: { id: "Semua benua", en: "All continents" },
+  worldSites: { id: "situs", en: "sites" },
 
-  /* ── Pemandu Budaya ────────────────────────────────────────────────── */
-  guideKicker: { id: "Pemandu budaya", en: "Cultural guide" },
-  guideTitle: {
-    id: "Tanyakan, lalu periksa jawabannya.",
-    en: "Ask it, then check the answer.",
+  /* ── Kartu undangan ──────────────────────────────────────────────────── */
+  inviteTitle: { id: "Mulai dari satu tempat.", en: "Begin with one place." },
+  inviteLead: {
+    id: "Satu situs, satu model yang bisa diputar, dan satu pemandu yang berhenti ketika datanya habis.",
+    en: "One site, one model you can turn, and one guide that stops when the data runs out.",
   },
-  guideLead: {
-    id: "Pemandu ini menjawab hanya dari berkas data situsnya sendiri, dan mengatakan tidak tahu ketika datanya habis. Pertanyaan di luar cakupan sengaja tidak dijawab — itu yang membedakan menjawab dari mengarang.",
-    en: "This guide answers only from the site's own data file, and says it does not know when the data runs out. Questions outside its scope are deliberately left unanswered — that is what separates answering from inventing.",
-  },
-
-  /* ── Pintu Masuk ─────────────────────────────────────────────────────── */
-  gatewayKicker: { id: "Pintu masuk", en: "Ways in" },
-  gatewayTitle: { id: "Mulai dari satu tempat.", en: "Begin with one place." },
-  gatewayLead: {
-    id: "Lima benua, dan di setiap kartu tertulis berapa warisan yang benar-benar ada di dalamnya. Arahkan pointer ke salah satunya untuk melihat letaknya di peta.",
-    en: "Five continents, and each card states how many sites genuinely sit inside it. Point at one to see where it falls on the map.",
-  },
-  gatewaySites: { id: "situs", en: "sites" },
-
-  closeTitle: { id: "Mulai dari satu tempat.", en: "Begin with one place." },
-  closeLead: {
-    id: "Pilih satu benua, lalu masuk ke dalam objectnya.",
-    en: "Choose a continent, then step inside the object.",
-  },
-  closeCta: { id: "Jelajahi Warisan Dunia", en: "Explore World Heritage" },
+  inviteCta: { id: "Jelajahi Warisan Dunia", en: "Explore World Heritage" },
 } satisfies Record<string, LocalizedText>;

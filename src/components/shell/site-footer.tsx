@@ -22,14 +22,14 @@ export function SiteFooter() {
         </div>
 
         <nav aria-label="Footer" className="flex flex-wrap gap-x-6 gap-y-2">
-          <Link href="/#peta" className="text-sm text-ink-muted transition-colors hover:text-ink">
+          <Link href="/#dunia" className="text-sm text-ink-muted transition-colors hover:text-ink">
             {dict.nav.explore}
           </Link>
-          <Link href="/#pemandu" className="text-sm text-ink-muted transition-colors hover:text-ink">
-            {dict.ai.guide}
-          </Link>
-          <Link href="/#tentang" className="text-sm text-ink-muted transition-colors hover:text-ink">
-            {dict.nav.about}
+          {/* `#pemandu` dan `#tentang` dihapus bersama section-nya. Yang
+              tersisa dua anchor yang benar-benar ada di landing — footer yang
+              menautkan ke ketiadaan lebih buruk daripada footer yang pendek. */}
+          <Link href="/#yang-hilang" className="text-sm text-ink-muted transition-colors hover:text-ink">
+            {dict.nav.lost}
           </Link>
         </nav>
       </div>

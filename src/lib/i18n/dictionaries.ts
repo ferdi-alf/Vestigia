@@ -23,6 +23,7 @@ const id = {
   nav: {
     home: "Beranda",
     explore: "Jelajahi",
+    lost: "Yang Hilang",
     compare: "Bandingkan",
     about: "Tentang",
     skipToContent: "Lompat ke konten",
@@ -213,6 +214,7 @@ const en: Dictionary = {
   nav: {
     home: "Home",
     explore: "Explore",
+    lost: "What is lost",
     compare: "Compare",
     about: "About",
     skipToContent: "Skip to content",
