@@ -1,0 +1,854 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+/* ══════════════════════════════════════════════════════════════════
+   Vestigia — design token
+
+   Terang, sinematik, hangat. Bukan putih netral: dasarnya condong ke
+   kapur sehingga batu, terakota dan perunggu pada model 3D terbaca
+   sebagai bahan yang berdiri di atas kertas, bukan sebagai potongan
+   yang ditempel ke layar putih.
+
+   Pembalikan dari versi gelap bukan sekadar menukar terang dan gelap.
+   Di atas kertas, bentuk terbaca lewat BAYANG, bukan lewat pendar —
+   jadi arah kontrasnya yang dibalik, bukan warnanya saja. Mataharinya
+   tetap di kiri; yang berpindah, bayangnya kini menggenang ke kanan.
+
+   Setiap nilai di bawah sudah dihitung rasio kontrasnya terhadap
+   kelima permukaan. Tidak ada yang diperkirakan.
+   ══════════════════════════════════════════════════════════════════ */
+@theme {
+  /* Permukaan. Tangganya membalik arti: makin menonjol berarti makin
+     MASUK ke dalam batu, bukan makin melayang di atasnya. Panel adalah
+     ceruk yang dipahat, dan itu sekaligus menjauhkan halaman ini dari
+     kartu melayang yang dilarang aturan anti design slop. */
+  --color-paper: #faf7f0;
+  --color-surface: #f1ebdf;
+  --color-raised: #e7dfd0;
+  --color-overlay: #ddd4c2;
+  --color-void: #d3c8b3;
+
+  /* Garis.
+     `line` dekoratif — pemisah dan tepi panel.
+     `line-strong` memagari kontrol, jadi ia terikat WCAG 1.4.11 dan wajib
+     mencapai 3:1 terhadap permukaan di belakangnya. Yang sekarang lulus di
+     kelimanya: paper 5,14 · surface 4,63 · raised 4,15 · overlay 3,73 ·
+     void 3,32. */
+  --color-line: #ded3bd;
+  --color-line-strong: #7a6648;
+
+  /* Teks. Keempatnya lulus 4,5:1 di SETIAP permukaan, termasuk `void` —
+     bukan hanya di dasar halaman. Angka terburuk ada di `ink-dim` pada
+     `void`: 4,86. */
+  --color-ink: #16120d;
+  --color-ink-soft: #342c23;
+  --color-ink-muted: #55493d;
+  --color-ink-dim: #5b4e41;
+
+  /* Aksen.
+     Di atas kertas, hover berarti LEBIH GELAP — kebalikan dari tema gelap,
+     tempat hover berarti lebih terang. `gold-dim` adalah satu-satunya emas
+     yang aman dipakai sebagai teks (8,63 … 5,58); `gold` untuk isian dan
+     tepi, dan sebagai cincin fokus ia lulus 3:1 di kelima permukaan
+     (5,35 · 4,82 · 4,32 · 3,82 · 3,28). */
+  --color-gold: #7d631a;
+  --color-gold-soft: #6a5315;
+  --color-gold-dim: #58450f;
+  --color-bronze: #634c2e;
+  --color-ember: #8a3411;
+
+  /* Teks di atas isian emas.
+     Di tema gelap peran ini kebetulan sama dengan permukaan terdalam,
+     sehingga keduanya memakai `void`. Di tema terang keduanya berpisah:
+     permukaan terdalam ingin pasir tua, teks di atas emas ingin nyaris
+     putih. Memaksakan satu token untuk dua peran adalah cara token
+     berbohong. 5,35 di atas `gold` · 6,86 di atas `gold-soft` ·
+     8,63 di atas `gold-dim`. */
+  --color-on-gold: #faf7f0;
+
+  /* Tipografi */
+  --font-display: var(--font-display), "Cormorant Garamond", Georgia, serif;
+  --font-sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+
+  /* Gerak — satu kurva untuk semuanya, supaya halaman terasa satu benda */
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out-soft: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+/* Aksen per benua, untuk wayfinding. Hue-nya dari src/data/continents.ts.
+   Lightness turun dari 0,72 ke 0,48: di atas kertas, aksen harus lebih
+   gelap daripada latarnya, bukan lebih terang. Kontras terendah dari
+   kelimanya terhadap `paper` adalah 5,36. */
+@theme {
+  --color-asia: oklch(0.48 0.13 35);
+  --color-africa: oklch(0.48 0.13 55);
+  --color-europe: oklch(0.48 0.13 220);
+  --color-americas: oklch(0.48 0.13 145);
+  --color-oceania: oklch(0.48 0.13 195);
+}
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+    @apply font-sans;
+  }
+
+  /* Butiran kertas dipanggang ke dasar halaman.
+     Tema terang mati karena datar: `#faf7f0` polos terbaca sebagai layar kosong,
+     bukan sebagai kertas. Satu petak noise 140px yang diulang mengembalikan
+     bahannya.
+
+     Ditaruh sebagai `background-image` pada `body`, bukan sebagai overlay
+     ber-`mix-blend-mode`, dan itu keputusan yang disengaja: overlay melayang
+     akan membuat stacking context baru di atas header sticky dan kedua kanvas
+     3D. Di sini ia cuma latar — nol stacking context, nol pointer-events yang
+     perlu dimatikan, dan opacity-nya sudah dipanggang ke dalam SVG-nya. */
+  body {
+    background-color: var(--color-paper);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23g)' opacity='0.05'/%3E%3C/svg%3E");
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overflow-x: hidden;
+  }
+
+  /* Fokus tidak pernah dihilangkan, hanya diberi bentuk yang pantas. */
+  :focus-visible {
+    outline: 2px solid var(--color-gold);
+    outline-offset: 3px;
+    border-radius: 3px;
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--color-gold) 26%, transparent);
+    color: var(--color-ink);
+  }
+
+  h1, h2, h3 {
+    font-family: var(--font-display);
+    font-weight: 300;
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--color-void);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-line-strong);
+    border: 2px solid var(--color-void);
+    border-radius: 6px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-ink-dim);
+  }
+}
+
+@layer components {
+  /* Label kecil huruf kapital di atas judul section. */
+  .kicker {
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-ink-dim);
+  }
+
+  /* Ceruk terang dengan tepi tipis — bentuk dasar seluruh UI.
+     Tidak ada bayangan jatuh: pemisahnya adalah selisih nada terhadap
+     kertas plus satu garis, sama seperti panel dipahat masuk. */
+  .panel {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: 0.75rem;
+  }
+
+  /* Latar di belakang kanvas 3D. Dilukis di CSS, bukan di WebGL, supaya
+     tidak ikut kena tone mapping dan tetap sewarna dengan UI di sekitarnya.
+     Terang di puncak, mengendap ke kapur di tepi — object gelap yang
+     disinari dari kiri jadi terbaca sebagai siluet bertepi menyala. */
+  .stage-backdrop {
+    background:
+      radial-gradient(120% 90% at 50% 12%, #fdfaf3 0%, #f5eee0 46%, #e8dfcb 100%);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   Peredam — dilukis dari token, bukan dari hex mentah
+
+   Kelimanya dulu hidup sebagai `rgba()` di dalam komponen, dan tugasnya
+   MENGGELAPKAN latar supaya teks pucat terbaca. Teksnya kini tinta gelap,
+   jadi tugasnya berbalik: menerangkan latar supaya tinta terbaca.
+
+   Ditulis dengan `color-mix` di atas `--color-paper`, jadi kalau tema
+   bergeser lagi, kelimanya ikut tanpa disentuh. Itu seluruh alasan mereka
+   pindah ke sini.
+   ══════════════════════════════════════════════════════════════════ */
+@layer components {
+  /* Hero: paling kuat di kiri tempat judul duduk, melepas ke kanan supaya
+     object 3D tidak ikut tercuci. */
+  .scrim-hero {
+    background: linear-gradient(
+      100deg,
+      color-mix(in oklab, var(--color-paper) 93%, transparent) 0%,
+      color-mix(in oklab, var(--color-paper) 66%, transparent) 40%,
+      color-mix(in oklab, var(--color-paper) 16%, transparent) 74%,
+      transparent 100%
+    );
+  }
+
+  /* Dua tepi kuat, tengah melepas — untuk section yang teksnya berkolom
+     di kiri dan kanan sementara gambarnya bernapas di tengah. */
+  .scrim-spread {
+    background: linear-gradient(
+      95deg,
+      color-mix(in oklab, var(--color-paper) 90%, transparent) 0%,
+      color-mix(in oklab, var(--color-paper) 62%, transparent) 50%,
+      color-mix(in oklab, var(--color-paper) 92%, transparent) 100%
+    );
+  }
+
+  /* Tegak: kuat di atas dan bawah, membuka di tengah. Dipakai peta dunia,
+     yang butuh bagian tengahnya sebening mungkin. */
+  .scrim-vertical {
+    background: linear-gradient(
+      to bottom,
+      color-mix(in oklab, var(--color-paper) 82%, transparent) 0%,
+      color-mix(in oklab, var(--color-paper) 38%, transparent) 40%,
+      color-mix(in oklab, var(--color-paper) 88%, transparent) 100%
+    );
+  }
+
+  /* Radial dari kiri — penutup, tempat teks berkumpul di satu sisi. */
+  .scrim-radial {
+    background: radial-gradient(
+      90% 70% at 18% 50%,
+      color-mix(in oklab, var(--color-paper) 90%, transparent) 0%,
+      color-mix(in oklab, var(--color-paper) 60%, transparent) 45%,
+      color-mix(in oklab, var(--color-paper) 88%, transparent) 100%
+    );
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   Motif — dilukis, bukan diunduh
+
+   Tiga dari lima motif dunia ini bisa dihitung peramban, jadi tidak ada
+   alasan mengirimkannya sebagai berkas. Yang prosedural juga ikut berganti
+   ketika token berganti; gambar tidak.
+   ══════════════════════════════════════════════════════════════════ */
+@layer components {
+  /* carved-edge — satu tepi tempat cahaya menyentuh batu. Di atas kertas
+     ia terbaca sebagai guratan emas yang memudar, bukan sebagai kilau. */
+  .carved-edge {
+    display: block;
+    height: 1px;
+    width: 2.5rem;
+    background: linear-gradient(
+      90deg,
+      var(--color-gold) 0%,
+      color-mix(in oklab, var(--color-gold) 40%, transparent) 60%,
+      transparent 100%
+    );
+  }
+
+  /* strata — lapisan batuan sebagai pembatas. Rapat di atas, renggang di
+     bawah, seperti endapan sungguhan yang termampat oleh berat di atasnya. */
+  .strata-rule {
+    height: 0.75rem;
+    width: 100%;
+    background-image: repeating-linear-gradient(
+      to bottom,
+      color-mix(in oklab, var(--color-line-strong) 70%, transparent) 0 1px,
+      transparent 1px 3px,
+      color-mix(in oklab, var(--color-line-strong) 32%, transparent) 3px 4px,
+      transparent 4px 9px
+    );
+    mask-image: linear-gradient(90deg, #000 0%, rgba(0, 0, 0, 0.35) 55%, transparent 100%);
+  }
+
+  /* coordinate-mark — centang survei halus. */
+  .coordinate-ticks {
+    background-image: repeating-linear-gradient(
+      90deg,
+      color-mix(in oklab, var(--color-ink-dim) 40%, transparent) 0 1px,
+      transparent 1px 12px
+    );
+  }
+
+  /* raking-light — mekanisme dari reactbits `SpotlightCard`, dengan satu
+     perubahan yang menentukan.
+
+     Aslinya menaruh gradien radial TEPAT DI POSISI KURSOR, sehingga sumber
+     cahayanya berpindah-pindah mengikuti pointer. Di dunia ini cahaya selalu
+     datang dari kiri — itu aturan §5 konsistensi desain, dan ia mengikat gambar,
+     gradien CSS, dan `directionalLight` di panggung 3D sekaligus. Lampu yang
+     melompat mengikuti tetikus akan mematahkan ketiganya sekaligus.
+
+     Jadi yang diambil mekanismenya saja: titik asalnya dikunci di tepi kiri, dan
+     pointer hanya mengatur SEBERAPA KUAT cahaya itu menyapu. Mendekat ke kiri
+     berarti lebih terang, seperti melangkah ke arah jendela.
+
+     `--lit` ditulis lewat ref langsung ke elemen, bukan lewat `setState` —
+     reactbits memanggil `setState` tiap `mousemove`, dan aturan anti design slop
+     melarang pola itu. */
+  .raking-card {
+    --lit: 0;
+    position: relative;
+    isolation: isolate;
+  }
+  .raking-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: var(--lit);
+    transition: opacity 320ms var(--ease-out-soft);
+    background: linear-gradient(
+      100deg,
+      color-mix(in oklab, var(--color-gold) 16%, transparent) 0%,
+      color-mix(in oklab, var(--color-gold) 6%, transparent) 38%,
+      transparent 72%
+    );
+  }
+
+  /* carved-edge yang bergerak — mekanisme dari reactbits `ShinyText`.
+     Satu pita emas menyapu sekali melintasi judul, lalu pergi: cahaya yang
+     menemukan tepi pahatan, bukan kilau logam yang berdenyut selamanya.
+
+     Ditulis ulang tanpa `motion@^12`. Paket itu dependency baru untuk sesuatu
+     yang GSAP — sudah terpasang — kerjakan dengan satu tween.
+
+     DUA PENGAMAN, dan keduanya menjawab kegagalan yang berbeda.
+
+     Pertama, `repeat` — bukan `no-repeat`. Pada posisi diam 150% dengan lebar
+     260%, offset gradiennya −2,4× lebar kotak, sehingga gambarnya hanya menutupi
+     0,2 lebar pertama. Dengan `no-repeat`, 80% sisa judul tidak punya latar sama
+     sekali — dan karena hurufnya transparan, 80% judul itu HILANG. Diulang,
+     bidang di luar band emas terisi `ink` dari ujung gradien berikutnya, dan
+     judul terbaca utuh. Band emasnya sendiri berjarak 2,6 lebar kotak dari
+     salinannya, jadi tidak pernah ada dua band yang terlihat sekaligus.
+
+     Kedua, `-webkit-text-fill-color`, bukan `color: transparent`. Kalau peramban
+     tidak mengenal properti itu ia juga tidak mengenal `background-clip: text`,
+     sehingga keduanya gagal bersama-sama dan yang tersisa adalah `color` biasa —
+     tinta. Menyetel `color: transparent` akan membuat kegagalan itu berakhir
+     pada judul tak terlihat, bukan pada judul polos. */
+  @supports (background-clip: text) or (-webkit-background-clip: text) {
+    .gold-sweep {
+      background-image: linear-gradient(
+        100deg,
+        var(--color-ink) 0%,
+        var(--color-ink) 40%,
+        var(--color-gold) 50%,
+        var(--color-ink) 60%,
+        var(--color-ink) 100%
+      );
+      background-size: 260% auto;
+      background-position: 150% center;
+      background-repeat: repeat;
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: var(--color-ink);
+      -webkit-text-fill-color: transparent;
+    }
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   Sheen — pita cahaya yang menyapu isian sekali saat disentuh
+
+   Pola "shiny button" yang sama dengan yang ada di katalog 21st.dev,
+   ditulis ulang dengan token kita. Yang diambil mekanismenya; warnanya
+   dari `--color-on-gold`, jadi ia ikut kalau paletnya bergeser.
+
+   Ia BUKAN `.gold-sweep`. Kelas itu menyapu TEKS — ia memakai
+   `background-clip: text` dan membuat isian huruf transparan, jadi
+   memasangnya pada tombol berisi justru menghapus labelnya. Dua pekerjaan
+   yang kelihatan mirip dan mekanismenya sama sekali berbeda.
+
+   Aturan §4 terpenuhi: sapuannya JAWABAN atas hover, bukan kilau yang
+   berdenyut sendiri selamanya. Ia lewat sekali lalu diam, dan di bawah
+   `prefers-reduced-motion` blok di bawah menetralkan transisinya.
+   ══════════════════════════════════════════════════════════════════ */
+@layer components {
+  .sheen::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    border-radius: inherit;
+    /* Dimiringkan supaya pitanya terbaca sebagai cahaya yang melintas, bukan
+       sebagai bilah yang bergeser. */
+    background: linear-gradient(
+      100deg,
+      transparent 38%,
+      color-mix(in oklab, var(--color-on-gold) 32%, transparent) 50%,
+      transparent 62%
+    );
+    background-size: 220% 100%;
+    background-position: 190% center;
+    transition: background-position 720ms var(--ease-out-soft);
+  }
+  .sheen:hover::after,
+  .sheen:focus-visible::after {
+    background-position: -90% center;
+  }
+}
+
+/* Hormati preferensi sistem. Dilacak di CSS *dan* di JS: GSAP dan animasi
+   kamera tidak bisa dihentikan oleh media query saja. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   Komposisi pengganti gambar
+
+   Dipakai ketika slot media belum terisi — dan empat di antaranya kini
+   dipakai SELALU, sebagai backdrop section yang sebenarnya. Alasannya ada
+   di aturan sumber arah seni: apa pun yang harus ikut berganti tema dibuat
+   prosedural. Pergantian tema persis kejadian yang menghukum backdrop
+   raster, dan kedelapannya baru saja membuktikannya.
+
+   Kedelapannya adalah komposisi jadi, bukan placeholder abu-abu: matahari
+   rendah dari kiri, bayang menggenang ke kanan, tanpa satu pun warna di
+   luar keluarga token. Halaman yang dikirim tanpa gambar tetap halaman
+   yang utuh.
+
+   PEMBALIKAN YANG MENENTUKAN — perspektif udara ikut membalik. Di atas
+   langit gelap, punggungan yang jauh lebih GELAP karena ia melebur ke
+   langit. Di atas kertas terang, punggungan yang jauh lebih TERANG, karena
+   sekarang langitnya yang terang. Menyalin nada lama apa adanya akan
+   membuat cakrawala terbaca terbalik.
+
+   Semuanya statis. Tidak ada satu pun `filter` atau properti layout yang
+   dianimasikan di sini, karena tidak ada yang dianimasikan sama sekali.
+   ══════════════════════════════════════════════════════════════════ */
+@layer components {
+  .fb-sky,
+  .fb-ridge-mid,
+  .fb-ridge-near,
+  .fb-dust,
+  .fb-stone,
+  .fb-chart,
+  .fb-chamber,
+  .fb-dusk {
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Langit cahaya pertama. Matahari duduk rendah di kiri — dari situlah
+     seluruh cahaya di situs ini datang, termasuk di panggung 3D. Langit
+     mengendap sedikit ke arah puncak bingkai, karena langit memang begitu. */
+  .fb-sky {
+    background:
+      radial-gradient(85% 55% at 16% 92%, #fff6e4 0%, #fdeed6 30%, transparent 66%),
+      linear-gradient(to top, #faf3e6 0%, #f1e9d9 48%, #e5dbc6 100%);
+  }
+
+  /* Bidang fokus. Nada tengah — cukup gelap untuk memotong langit, cukup
+     terang untuk tetap terbaca sebagai sesuatu yang jauh. Sisi kiri lebih
+     terang karena ia menghadap matahari. */
+  .fb-ridge-mid::before {
+    content: "";
+    position: absolute;
+    inset: auto 0 0 0;
+    height: 54%;
+    background: linear-gradient(102deg, #b9a685 0%, #a89275 20%, #917c60 56%, #7d6a52 100%);
+    clip-path: polygon(
+      0% 72%, 8% 53%, 14% 61%, 22% 33%, 31% 45%, 41% 21%,
+      51% 37%, 61% 27%, 71% 47%, 83% 37%, 92% 53%, 100% 45%, 100% 100%, 0% 100%
+    );
+  }
+
+  /* Batu terdekat, paling gelap. Buramnya dipanggang di sini, sekali, dan
+     tidak pernah dianimasikan — menganimasikan filter saat scroll adalah
+     cara tercepat menjatuhkan frame rate di ponsel kelas menengah. */
+  .fb-ridge-near::before {
+    content: "";
+    position: absolute;
+    inset: auto -2% -2% -2%;
+    height: 40%;
+    background: linear-gradient(105deg, #5f5344 0%, #3d3427 68%);
+    filter: blur(3px);
+    clip-path: polygon(
+      0% 16%, 13% 29%, 25% 21%, 39% 41%, 54% 33%,
+      71% 51%, 85% 43%, 100% 60%, 100% 100%, 0% 100%
+    );
+  }
+
+  /* Debu. Di atas kertas, butir debu terlihat karena ia lebih GELAP
+     daripada udara di sekitarnya — bukan karena ia menyala. Petaknya
+     diulang lalu dipotong miring supaya terkumpul di jalur cahaya alih-alih
+     tersebar rata. */
+  .fb-dust {
+    background-image:
+      radial-gradient(1.6px 1.6px at 14% 18%, rgba(92, 74, 48, 0.34), transparent 62%),
+      radial-gradient(1.2px 1.2px at 38% 42%, rgba(92, 74, 48, 0.27), transparent 62%),
+      radial-gradient(2px 2px at 63% 12%, rgba(104, 84, 56, 0.24), transparent 60%),
+      radial-gradient(1.1px 1.1px at 82% 36%, rgba(92, 74, 48, 0.3), transparent 62%),
+      radial-gradient(1.5px 1.5px at 26% 71%, rgba(104, 84, 56, 0.22), transparent 62%),
+      radial-gradient(1.3px 1.3px at 55% 84%, rgba(92, 74, 48, 0.25), transparent 62%),
+      radial-gradient(1.8px 1.8px at 91% 66%, rgba(104, 84, 56, 0.2), transparent 60%),
+      radial-gradient(1px 1px at 7% 52%, rgba(92, 74, 48, 0.26), transparent 62%);
+    background-size: 380px 300px;
+    mask-image: linear-gradient(112deg, #000 0%, rgba(0, 0, 0, 0.55) 40%, transparent 74%);
+  }
+
+  /* Batu pasir dari dekat: pengendapan mendatar, disapu cahaya dari kiri.
+     Guratannya kini lebih gelap daripada batunya, bukan lebih terang. */
+  .fb-stone {
+    background-color: #f0e8d8;
+    background-image:
+      repeating-linear-gradient(
+        92deg,
+        color-mix(in oklab, var(--color-bronze) 16%, transparent) 0 2px,
+        transparent 2px 9px
+      ),
+      repeating-linear-gradient(88deg, rgba(61, 52, 39, 0.1) 0 1px, transparent 1px 15px),
+      radial-gradient(150% 90% at 6% 45%, color-mix(in oklab, var(--color-gold) 14%, transparent), transparent 58%);
+  }
+
+  /* Kertas survei. Dulu `fb-night` — langit malam berbintang, karena peta
+     gelap butuh kegelapan untuk terbaca. Nama itu kini akan berbohong: yang
+     dilukis di sini adalah lembar survei terang, dan petanya terbaca karena
+     daratannya lebih gelap daripada kertasnya. Lima per enam bagian atas
+     tetap sengaja nyaris kosong — di situ peta duduk. */
+  .fb-chart {
+    background:
+      radial-gradient(1px 1px at 18% 26%, rgba(88, 72, 48, 0.2), transparent 60%),
+      radial-gradient(1px 1px at 47% 14%, rgba(88, 72, 48, 0.14), transparent 60%),
+      radial-gradient(1.2px 1.2px at 73% 31%, rgba(88, 72, 48, 0.16), transparent 60%),
+      radial-gradient(1px 1px at 88% 12%, rgba(88, 72, 48, 0.12), transparent 60%),
+      radial-gradient(1px 1px at 31% 47%, rgba(88, 72, 48, 0.1), transparent 60%),
+      linear-gradient(to top, color-mix(in oklab, var(--color-ember) 12%, transparent) 0%, transparent 13%),
+      linear-gradient(to top, #f6efe1 0%, #faf5ea 40%, #fdf9f1 100%);
+  }
+
+  /* Berkas cahaya masuk dari kiri ke ruang berdebu; kanannya mengendap
+     lebih dalam, karena panel AI duduk di sana dan teks butuh latar yang
+     tenang. Di atas kertas, "berkas cahaya" berarti sisi kiri dibiarkan
+     paling bersih — bukan diberi pendar. */
+  .fb-chamber {
+    background:
+      linear-gradient(
+        104deg,
+        rgba(255, 252, 245, 0.9) 0%,
+        rgba(255, 250, 238, 0.45) 18%,
+        transparent 46%
+      ),
+      radial-gradient(80% 120% at 2% 26%, color-mix(in oklab, var(--color-gold) 16%, transparent), transparent 55%),
+      linear-gradient(90deg, #fbf6ec 0%, #f2ebdc 62%, #e9e0cd 100%);
+  }
+
+  /* Dataran senja: cakrawala di sepertiga bawah, matahari menyentuh kiri. */
+  .fb-dusk {
+    background:
+      radial-gradient(42% 26% at 22% 68%, color-mix(in oklab, var(--color-ember) 26%, transparent), transparent 68%),
+      linear-gradient(
+        to bottom,
+        #fcf8ef 0%,
+        #f7f0e2 46%,
+        color-mix(in oklab, var(--color-bronze) 22%, #efe4cf) 66%,
+        #f4ecdd 74%,
+        #faf6ed 100%
+      );
+  }
+}
+
+/* Muncul kembali dengan mulus.
+   Dipakai panggung 3D saat ia akhirnya dipasang: tanpa ini kanvas menyambar
+   masuk begitu saja dan membatalkan seluruh ketenangan halaman di atasnya.
+   Blok prefers-reduced-motion di atas sudah memangkasnya jadi seketika. */
+@keyframes vestigia-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@layer components {
+  .fade-in {
+    animation: vestigia-fade-in 600ms var(--ease-out-soft) both;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   Palet per konsep — hanya berlaku di /concepts
+
+   Tiga arah seni yang berbeda butuh tiga palet yang berbeda, tetapi
+   aturan §5 tetap berlaku: tidak ada hex mentah di komponen. Jadi yang
+   dilakukan di sini bukan menambah warna baru, melainkan MENDEFINISIKAN
+   ULANG nama token semantik yang sama pada satu pembungkus.
+
+   Kenapa ini bekerja tanpa perang specificity: `@theme` menaruh nilainya
+   di `:root`, yaitu `<html>`. Pembungkus konsep adalah keturunannya, dan
+   deklarasi pada keturunan selalu menang untuk subtree-nya sendiri —
+   bukan karena lebih spesifik, melainkan karena ia elemen yang berbeda.
+   Utilitas Tailwind v4 mengompilasi `bg-paper` menjadi
+   `background-color: var(--color-paper)`, sehingga seluruh utilitas ikut
+   berpindah tanpa satu pun kelas disentuh.
+
+   SETIAP ANGKA DI BAWAH SUDAH DIHITUNG, tidak ada yang diperkirakan.
+   Ambangnya: teks ≥ 4,5:1 di KELIMA permukaan, `line-strong` dan `gold`
+   (cincin fokus) ≥ 3:1 di kelimanya, teks di atas isian emas ≥ 4,5:1.
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── A · Dunia yang Meredup ──────────────────────────────────────────
+   Krem Claude — hangat, sedikit condong oranye, dan sengaja BUKAN putih.
+   Jangkarnya `#faf9f5`, latar terang Claude; tangganya turun menuju
+   `#f0eee6`, krem sekunder yang sama. Putih murni membaca sebagai layar
+   kosong dan menyilaukan di halaman yang isinya batu dan cahaya rendah;
+   krem ini menyisakan suhu, dan suhunya searah dengan matahari rendah
+   yang menyinari seluruh situs ini dari kiri.
+
+   Pembalikan dari versi gelap bukan sekadar menukar terang dan gelap. Di
+   dalam gelap, bentuk terbaca lewat PENDAR, jadi hover berarti lebih
+   terang. Di atas krem, bentuk terbaca lewat BAYANG — jadi arah seluruh
+   tangga dibalik: hover lebih gelap, `line-strong` lebih gelap daripada
+   permukaannya, dan aksen benua turun karena penanda kini terbaca dengan
+   menjadi lebih gelap daripada latarnya.
+
+   **Nilainya diturunkan satu tingkat dari `#faf9f5`.** Bukan karena krem
+   Claude salah, melainkan karena halaman ini punya lorong gelap delapan
+   detik di tengahnya: krem yang terlalu terang membuat masuk ke video
+   terasa sebagai patahan, bukan sebagai turun. Hue-nya tidak disentuh —
+   yang berubah hanya nilainya. Peredam bertahap di panggung mengerjakan
+   sisanya; lihat `use-dive-film`.
+
+   `ember` didorong sejauh mungkin ke arah koral tanpa melanggar ambang.
+   Pada tangga yang lebih teduh ini batasnya ikut bergeser: `#8b330c` yang
+   tadinya aman kini gagal di 4,47, jadi yang dipakai `#88310b` di 4,63.
+   Batasnya yang menentukan nilainya, bukan selera.
+
+   SETIAP ANGKA DIHITUNG ULANG. Teks terburuk 5,12 (`ink-dim` di `void`) ·
+   tepi terburuk 3,79 (`line-strong` di `void`) · `on-gold` 6,88. Ketiganya
+   tetap lebih lega daripada palet B yang sudah terverifikasi (4,91 · 3,30 ·
+   5,57). */
+[data-concept="a"] {
+  color-scheme: light;
+
+  --color-paper: #f4f2ea;
+  --color-surface: #ece9df;
+  --color-raised: #e3dfd2;
+  --color-overlay: #d6d1c0;
+  --color-void: #c6c0ab;
+
+  --color-line: #e0dccf;
+  --color-line-strong: #635944;
+
+  --color-ink: #17140f;
+  --color-ink-soft: #2e2a21;
+  --color-ink-muted: #494236;
+  --color-ink-dim: #4d4639;
+
+  /* Tangga emas MENURUN: di atas krem, hover berarti lebih gelap.
+     Kebalikan persis dari tema gelap, tempat ketiganya naik. */
+  --color-gold: #665013;
+  --color-gold-soft: #554211;
+  --color-gold-dim: #43350b;
+  --color-bronze: #584324;
+  --color-ember: #88310b;
+  --color-on-gold: #f4f2ea;
+
+  /* Aksen benua turun ke 0,48. Di atas krem penanda terbaca karena ia
+     lebih GELAP daripada latarnya — mempertahankan 0,72 dari tema gelap
+     akan membuat kelima belas titik lenyap ke dalam terang. */
+  --color-asia: oklch(0.48 0.13 35);
+  --color-africa: oklch(0.48 0.13 55);
+  --color-europe: oklch(0.48 0.13 220);
+  --color-americas: oklch(0.48 0.13 145);
+  --color-oceania: oklch(0.48 0.13 195);
+
+  --shell: min(80rem, 82vw);
+  --shell-wide: min(96rem, 94vw);
+  --shell-text: min(44rem, 100%);
+}
+
+/* ── B · Arsip ───────────────────────────────────────────────────────
+   Kertas editorial. Lebih bersih dan lebih kontras daripada palet situs
+   utama: tinta nyaris hitam, emas turun jadi garis rambut saja. Ia harus
+   terbaca sebagai halaman cetak, bukan sebagai layar.
+   Teks terburuk 4,91 · tepi 3,30 · fokus 3,45. */
+[data-concept="b"] {
+  color-scheme: light;
+
+  --color-paper: #faf8f3;
+  --color-surface: #f2eee5;
+  --color-raised: #e9e3d6;
+  --color-overlay: #ded6c5;
+  --color-void: #cfc5b0;
+
+  --color-line: #ddd5c4;
+  --color-line-strong: #77653f;
+
+  --color-ink: #111008;
+  --color-ink-soft: #2f2a20;
+  --color-ink-muted: #4f4639;
+  --color-ink-dim: #564c3e;
+
+  --color-gold: #7a6118;
+  --color-gold-soft: #675012;
+  --color-gold-dim: #55420d;
+  --color-bronze: #61492b;
+  --color-ember: #87330f;
+  --color-on-gold: #faf8f3;
+
+  --shell: min(78rem, 84vw);
+  --shell-wide: min(88rem, 92vw);
+  --shell-text: min(40rem, 100%);
+}
+
+/* ── C · Atlas ───────────────────────────────────────────────────────
+   Kertas survei paling terang, dan sedikit dingin — instrumen, bukan
+   film. Tinta condong biru-hitam. Kerja warna sebenarnya diserahkan ke
+   kelima aksen benua; `gold` tinggal sebagai satu-satunya aksen
+   interaksi, supaya peta tidak berubah jadi pelangi.
+   Teks terburuk 4,88 · tepi 3,23 · fokus 4,22. */
+[data-concept="c"] {
+  color-scheme: light;
+
+  --color-paper: #fdfdfb;
+  --color-surface: #f4f5f2;
+  --color-raised: #eaebe6;
+  --color-overlay: #dee0d9;
+  --color-void: #ced1c8;
+
+  --color-line: #e2e4de;
+  --color-line-strong: #6a7078;
+
+  --color-ink: #101317;
+  --color-ink-soft: #2b3037;
+  --color-ink-muted: #474e57;
+  --color-ink-dim: #4e555e;
+
+  --color-gold: #6f5c17;
+  --color-gold-soft: #5d4c11;
+  --color-gold-dim: #4c3e0c;
+  --color-bronze: #5a5245;
+  --color-ember: #8a3410;
+  --color-on-gold: #fdfdfb;
+
+  --color-asia: oklch(0.46 0.14 35);
+  --color-africa: oklch(0.46 0.14 55);
+  --color-europe: oklch(0.46 0.14 220);
+  --color-americas: oklch(0.46 0.14 145);
+  --color-oceania: oklch(0.46 0.14 195);
+
+  --shell: min(88rem, 86vw);
+  --shell-wide: min(100rem, 94vw);
+  --shell-text: min(42rem, 100%);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   Sistem container konsep
+
+   Satu tepi kiri untuk navbar, peta, dan isi section. Keluhan yang
+   memicu ini spesifik: di landing lama setiap section memakai lebar
+   maksimum yang berbeda (`max-w-7xl`, `max-w-3xl`, `max-w-[110rem]`,
+   `max-w-6xl`), sehingga tepi kiri berpindah tiap kali pengunjung
+   menggulir dan halaman berhenti terbaca sebagai satu benda.
+
+   `.shell` dipakai hampir di mana-mana. `.shell-wide` HANYA untuk
+   panggung yang memang harus melampaui tepi itu. `.shell-text`
+   menyempitkan ukuran baca TANPA memindahkan tepi kirinya — ia
+   `max-width`, bukan container ber-margin auto, dan itu perbedaan
+   yang menentukan.
+   ══════════════════════════════════════════════════════════════════ */
+@layer components {
+  .shell {
+    width: var(--shell, min(84rem, 80vw));
+    margin-inline: auto;
+  }
+  .shell-wide {
+    width: var(--shell-wide, min(92rem, 92vw));
+    margin-inline: auto;
+  }
+  .shell-text {
+    max-width: var(--shell-text, min(46rem, 100%));
+  }
+
+  /* Di bawah 640px, "80% dari viewport" berhenti masuk akal: sisa 20%
+     jadi selokan yang memakan ruang baca. Ketiganya melebar jadi
+     padding tetap. */
+  @media (max-width: 40rem) {
+    .shell,
+    .shell-wide {
+      width: auto;
+      margin-inline: 1rem;
+    }
+  }
+}
+
+/* ── Ground per konsep ───────────────────────────────────────────────
+   `body` memakai `bg-paper` global plus butiran kertasnya sendiri, dan
+   keduanya milik situs utama. Route konsep berada di dalam body itu,
+   jadi tiap konsep WAJIB melukis dasarnya sendiri — kalau tidak, kertas
+   situs utama akan terlihat di belakang palet gelap A.
+
+   Butiran A dulu disetel untuk dasar gelap: opacity 0,07 supaya ia
+   terlihat dengan menjadi lebih TERANG daripada latarnya. Di atas kapur
+   arahnya berbalik — butir kini terbaca karena lebih gelap, dan 0,07
+   terlalu keras sehingga halamannya terlihat kotor. Diturunkan ke 0,035,
+   sama dengan B, dan frekuensinya dinaikkan sedikit supaya butirannya
+   lebih halus: dinding galeri, bukan kertas tua.
+
+   Pancaran emas di pojok kiri atas juga diturunkan dari 7% ke 4%. Di atas
+   gelap ia jejak cahaya; di atas kapur, 7% membaca sebagai noda kuning. */
+@layer components {
+  .concept-ground {
+    background-color: var(--color-paper);
+    min-height: 100dvh;
+  }
+
+  [data-concept="a"] .concept-ground {
+    background-image:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.86' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23g)' opacity='0.035'/%3E%3C/svg%3E"),
+      radial-gradient(120% 80% at 12% 0%, color-mix(in oklab, var(--color-gold) 4%, transparent) 0%, transparent 58%);
+  }
+
+  [data-concept="b"] .concept-ground {
+    background-image:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23g)' opacity='0.055'/%3E%3C/svg%3E");
+  }
+
+  /* C tidak berbutir. Ia lembar survei yang baru dicetak, dan yang
+     memberinya bahan adalah kisi ukur — bukan kertas tua. */
+  [data-concept="c"] .concept-ground {
+    background-image:
+      linear-gradient(to right, color-mix(in oklab, var(--color-line-strong) 13%, transparent) 0 1px, transparent 1px 100%),
+      linear-gradient(to bottom, color-mix(in oklab, var(--color-line-strong) 13%, transparent) 0 1px, transparent 1px 100%);
+    background-size: 64px 64px, 64px 64px;
+  }
+}

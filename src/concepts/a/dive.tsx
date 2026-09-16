@@ -1,0 +1,181 @@
+"use client";
+
+import Link from "next/link";
+import dynamic from "next/dynamic";
+import { useCallback, useRef, useState } from "react";
+import type { Heritage } from "@/data/types";
+import type { DiveProgress, GlobeMark } from "@/components/three/globe-stage";
+import { CONCEPT_MEDIA } from "@/data/landing-media";
+import { MediaLayer } from "@/components/landing/media-layer";
+import { buttonClass } from "@/components/ui/button";
+import { useI18n } from "@/lib/i18n/client";
+import { useInView } from "@/lib/motion/use-in-view";
+import { useStillPreference } from "@/lib/motion/use-still-preference";
+import { MetadataChip } from "@/concepts/shell/metadata-chip";
+import { A_COPY } from "./copy";
+import { useDiveFilm } from "./use-dive-film";
+
+const GlobeStage = dynamic(
+  () => import("@/components/three/globe-stage").then((m) => m.GlobeStage),
+  { ssr: false },
+);
+
+const slot = (id: string) => CONCEPT_MEDIA.find((s) => s.id === id)!;
+const DUST = slot("a-dust");
+
+/**
+ * Pembuka — teks di kiri, globe di kanan, satu panggung lengket ter-scrub.
+ *
+ * ---
+ *
+ * **VIDEO DIBUANG SELURUHNYA.** Versi sebelumnya membuka dengan klip 7,95 MB
+ * yang di-scrub, lalu menutupnya dengan dua panel kertas untuk menyerahkan
+ * bingkai ke globe. Pemilik project memotongnya: halaman kini sepenuhnya
+ * animasi, tanpa satu byte video pun.
+ *
+ * Yang ikut pergi bersamanya karena memang tidak punya pekerjaan lagi: kedua
+ * panel tirai (tidak ada yang perlu disapu bersih) dan kerai keterbacaan (teks
+ * berdiri di atas kertas sejak bingkai pertama, bukan di atas klip gelap).
+ * Transfer halaman ini turun sekitar 8 MB karenanya.
+ *
+ * **Urutan lapisan tinggal tiga, dan urutannya syarat:**
+ *
+ *     z-[1]  kanvas 3D   globe, satu-satunya subjek
+ *     z-[2]  debu        di DEPAN subjek; debu di belakang subjek cuma tekstur
+ *     z-10   teks
+ *
+ * Tinggi section dan `sticky` adalah PASANGAN: ScrollTrigger di `use-dive-film`
+ * berjalan dari `top top` ke `bottom bottom`, yang persis sama dengan lama
+ * elemen lengket bertahan di layar. Mengubah salah satunya tanpa yang lain akan
+ * mengembalikan ruang scroll mati yang sudah dihapus.
+ */
+export function Dive({ heritage, marks }: { heritage: Heritage; marks: GlobeMark[] }) {
+  const { locale, dict } = useI18n();
+  const root = useRef<HTMLElement>(null);
+  const stage = useRef<HTMLDivElement>(null);
+  const progress = useRef<DiveProgress>({ value: 0, intro: 0 });
+  const [gateRef, { active, entered }] = useInView<HTMLDivElement>({ rootMargin: "200px" });
+  const still = useStillPreference();
+
+  /* Pemilik kotak progres ada di sini, dan hanya di sini.
+     Film menerbitkan angkanya; panggung 3D dan video membacanya. Identitasnya
+     stabil, jadi ia tidak pernah memicu film dirakit ulang. */
+  const publish = useCallback((patch: Partial<DiveProgress>) => {
+    Object.assign(progress.current, patch);
+  }, []);
+
+  /* Apakah panggung ini sudah benar-benar dilewati.
+
+     Bukan gerbang "boleh menggambar" melainkan gerbang "boleh ADA". Section
+     `relic` di bawah sini memasang penampil warisannya sendiri dengan kanvas
+     sendiri; membiarkan kanvas globe tetap terpasang berarti dua konteks WebGL
+     hidup pada satu halaman, dan §7 menuntut satu.
+
+     Dilepas saat panggung lewat, dipasang lagi saat pengunjung menggulir balik.
+     Yang mahal dari memasang ulang — derau prosedural 2048x1024 — sudah tidak
+     dihitung dua kali sejak `createGlobeMaps` menyimpan kanvasnya. */
+  const [passed, setPassed] = useState(false);
+
+  useDiveFilm(root, publish, setPassed);
+
+
+  return (
+    <section
+      ref={root}
+      aria-labelledby="a-hero-title"
+      className="relative motion-safe:h-[240svh] md:motion-safe:h-[300svh]"
+    >
+      <div
+        ref={stage}
+        className="sticky top-0 flex h-svh items-center overflow-hidden motion-reduce:static motion-reduce:h-auto motion-reduce:py-28"
+      >
+        {/* z-[1] · panggung 3D — satu-satunya subjek section ini.
+
+            `active` mematikan loop render saat kanvas keluar layar atau tab
+            disembunyikan; `passed` MELEPASNYA sama sekali begitu panggung
+            benar-benar lewat, supaya section di bawah tidak pernah berbagi
+            halaman dengan konteks WebGL kedua. */}
+        <div ref={gateRef} className="absolute inset-0 z-[1]">
+          {entered && !passed ? (
+            <GlobeStage
+              marks={marks}
+              targetSlug={heritage.slug}
+              progress={progress}
+              active={active}
+              still={still}
+            />
+          ) : null}
+        </div>
+
+        {/* z-[2] · debu, di DEPAN subjek. Debu di belakang subjek bukan debu;
+            ia cuma tekstur langit. Masuk bersama globe, tidak sebelumnya. */}
+        <div data-dive-dust className="absolute inset-0 z-[2]">
+          <MediaLayer slot={DUST} sizes="100vw" />
+        </div>
+
+        <div className="shell relative z-10">
+          {/* ══ Sambutan ══════════════════════════════════════════════ */}
+          <div data-dive-hero>
+            <p className="kicker">{A_COPY.heroKicker[locale]}</p>
+            <h1
+              id="a-hero-title"
+              className="shell-text mt-6 font-display text-[2.6rem] leading-[1.04] text-ink sm:text-6xl lg:text-7xl"
+            >
+              {/* Jendela ber-overflow-hidden yang bergerak, bukan huruf per
+                  huruf. Teksnya tetap satu blok utuh bagi pembaca layar dan
+                  bagi Ctrl+F. */}
+              <span data-reveal-line className="block overflow-hidden pb-[0.08em]">
+                <span className="block">{A_COPY.heroTitle[locale]}</span>
+              </span>
+            </h1>
+            <p data-dive-lead className="shell-text mt-7 text-base leading-relaxed text-ink-muted sm:text-lg">
+              {A_COPY.heroLead[locale]}
+            </p>
+
+            {/* Kepadatan yang menyebutkan sesuatu. Ketiganya dibaca dari
+                koleksi, jadi mereka informasi — bukan bentuk yang mengisi
+                ruang kosong. */}
+            <div className="mt-8 flex flex-wrap gap-2">
+              <MetadataChip data-dive-chip label={A_COPY.chipSites[locale]} value={String(marks.length)} tone="mark" />
+              <MetadataChip data-dive-chip label={A_COPY.chipContinents[locale]} value="5" tone="mark" />
+              <MetadataChip data-dive-chip label={A_COPY.chipFormat[locale]} value={A_COPY.chipFormatValue[locale]} />
+            </div>
+
+            {/* SATU ajakan, dan ia menuju object 3D-nya sendiri. */}
+            <div className="mt-9 flex flex-wrap items-center gap-3 sm:gap-4">
+              <Link
+                data-dive-action
+                href={`/heritage/${heritage.slug}`}
+                className={buttonClass({ size: "lg" })}
+              >
+                {dict.landing.heroPrimary}
+              </Link>
+            </div>
+          </div>
+
+          {/* ══ Jembatan ══════════════════════════════════════════════
+              Satu kalimat, ditahan diam sepanjang `close` sementara globe
+              mendekat. Ia menggambarkan
+              apa yang sedang terjadi di layar, jadi ia bukan hiasan, dan ia
+              tidak mengklaim apa pun tentang laju kerusakan warisan.
+
+              Rata kiri dan dibatasi separuh lebar: globe duduk di kanan, dan
+              kalimat yang melintasinya akan dibaca di atas bola. */}
+          <p
+            data-dive-bridge
+            className="font-display text-3xl leading-snug text-ink-soft motion-safe:absolute motion-safe:top-1/2 motion-safe:-translate-y-1/2 motion-reduce:mt-16 sm:text-4xl lg:max-w-[46%]"
+          >
+            {A_COPY.bridgeLine[locale]}
+          </p>
+        </div>
+
+        <p
+          data-dive-hint
+          className="pointer-events-none absolute inset-x-0 bottom-6 z-10 text-center text-[0.65rem] tracking-[0.2em] text-ink-dim uppercase"
+        >
+          {A_COPY.scrollHint[locale]}
+        </p>
+      </div>
+    </section>
+  );
+}

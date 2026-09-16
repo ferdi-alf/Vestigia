@@ -1,0 +1,23 @@
+{
+  "_comment": "Peta nama file GLB sumber -> slug kanonik. Hanya perlu diisi kalau nama file sumber berantakan; nama yang sudah rapi dinormalisasi otomatis. Slug inilah yang jadi URL dan nama file metadata.",
+
+  "abu-simbel": "abu-simbel",
+  "church-of-st.-george-in-lalibela-ethiopia": "lalibela",
+  "the-great-pyramid-of-giza-detailled-normal": "great-pyramid-of-giza",
+
+  "chichen-itza-pyramid-3d-reconstruction-detailled-normal": "chichen-itza",
+  "machu-picchu---peru-andes-mountains": "machu-picchu",
+  "statue-of-liberty": "statue-of-liberty",
+
+  "ad-deir_monastery_petra_jordan": "petra",
+  "angkor_wat_temple_cambodia": "angkor-wat",
+  "archer_of_the_terracotta_army_replica": "terracotta-army",
+  "candi-borobudur-detailled-normal": "borobudur",
+
+  "colosseum_rome_italy": "colosseum",
+  "notre-dame-crowdsourced-photogrammetry-detailled-normal": "notre-dame",
+  "stonehenge_angleterre": "stonehenge",
+
+  "moai-replical": "moai",
+  "sydney-opera-house-sydney-australia": "sydney-opera-house"
+}
