@@ -1,13 +1,24 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useMemo, useRef, useState } from "react";
 import type { Continent } from "@/data/types";
 import type { MapPoint } from "@/components/landing/types";
 import { CONTINENT_INFO, CONTINENT_ORDER } from "@/data/continents";
 import { useI18n } from "@/lib/i18n/client";
+import { useInView } from "@/lib/motion/use-in-view";
+import { useStillPreference } from "@/lib/motion/use-still-preference";
 import { EASE, gsap, useScrollScene } from "@/lib/motion/use-scroll-scene";
 import { cn } from "@/lib/cn";
 import { A_COPY } from "./copy";
+
+/* Kanvas dimuat hanya di klien: WebGL tidak ada di server, dan menariknya ke
+   bundle server hanya memperlambat render pertama tanpa menghasilkan satu
+   piksel pun. */
+const WorldGlobe = dynamic(
+  () => import("@/components/three/world-globe").then((m) => m.WorldGlobe),
+  { ssr: false },
+);
 
 /**
  * Dunia — lima benua, lima belas yang bertahan.
@@ -33,6 +44,8 @@ export function World({ points }: { points: MapPoint[] }) {
   const { locale } = useI18n();
   const root = useRef<HTMLElement>(null);
   const [active, setActive] = useState<Continent | null>(null);
+  const [gateRef, { active: visible, entered }] = useInView<HTMLDivElement>({ rootMargin: "300px" });
+  const still = useStillPreference();
 
   /* Dihitung dari koleksi, sekali. Menambah satu GLB mengubah angka ini tanpa
      menyentuh satu baris pun di sini — aturan §2, menambah isi tidak boleh
@@ -125,9 +138,23 @@ export function World({ points }: { points: MapPoint[] }) {
           </ul>
         </div>
 
-        {/* ══ Kanan — globe ═════════════════════════════════════════ */}
-        <div data-world-stage className="lg:col-span-8">
-          <div className="stage-backdrop relative aspect-square w-full overflow-hidden rounded-2xl border border-line sm:aspect-[4/3]" />
+        {/* ══ Kanan — globe ═════════════════════════════════════════
+
+            `entered` memasangnya sekali dan tidak pernah membatalkannya;
+            `visible` yang menghidupkan dan mematikan loop rendernya. Membuka
+            halaman lalu berhenti di pembuka tidak menarik satu byte pun untuk
+            section ini — §7. */}
+        <div data-world-stage ref={gateRef} className="lg:col-span-8">
+          <div className="stage-backdrop relative aspect-square w-full overflow-hidden rounded-2xl border border-line sm:aspect-[4/3]">
+            {entered ? (
+              <WorldGlobe
+                marks={points}
+                activeContinent={active}
+                active={visible}
+                still={still}
+              />
+            ) : null}
+          </div>
         </div>
       </div>
     </section>
