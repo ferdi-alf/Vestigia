@@ -81,6 +81,8 @@ export const ASSET_MANIFEST: readonly HeritageAsset[] = [
     continent: "europe",
     modelPath: "/models/europe/stonehenge.glb",
     bytes: 2103660,
+    proxyPath: "/models/europe/stonehenge-proxy.glb",
+    proxyBytes: 63808,
   },
   {
     slug: "moai",

@@ -133,6 +133,20 @@ export interface HeritageAsset {
   modelPath: string;
   /** ukuran file setelah optimasi, byte */
   bytes: number;
+  /**
+   * Varian jauh lebih kecil untuk dipakai saat object cuma sebesar kuku.
+   *
+   * Opsional, dan itu disengaja: globe di section Dunia butuh lima belas model
+   * sekaligus, dan lima belas model penuh berarti 52 MB. Pada ukuran di layar
+   * beberapa puluh piksel, tekstur 128 dan geometri yang dipangkas habis tidak
+   * bisa dibedakan dari aslinya — yang terbaca cuma siluetnya.
+   *
+   * Kalau `sync-heritage` belum pernah dijalankan sejak proxy ada, field ini
+   * kosong dan pemanggilnya jatuh ke `modelPath`. Nol asumsi asset, §1.
+   */
+  proxyPath?: string;
+  /** ukuran varian proxy, byte */
+  proxyBytes?: number;
 }
 
 /**
@@ -143,6 +157,8 @@ export interface Heritage extends HeritageMeta {
   continent: Continent;
   modelPath: string;
   bytes: number;
+  proxyPath?: string;
+  proxyBytes?: number;
 }
 
 /** Ambil sisi bahasa yang benar dari teks dwibahasa. */

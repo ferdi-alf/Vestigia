@@ -15,7 +15,7 @@
  * Berjalan otomatis sebelum `build` (penuh) dan `dev` (--fast).
  * Aman dijalankan berulang: file yang sudah mutakhir dilewati.
  */
-import { execFileSync } from "node:child_process";
+import { execSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -92,6 +92,27 @@ const LADDER = [
  * itu — biasanya karena geometrinya tidak punya vertex bersama sama sekali —
  * dan melanjutkan hanya menukar kualitas dengan nol keuntungan.
  */
+/**
+ * Tangga untuk varian PROXY — object seukuran kuku di atas globe.
+ *
+ * Bukan bagian dari tangga utama dan tidak pernah dipilih untuk halaman
+ * warisan. Section Dunia menampilkan kelima belas model sekaligus, dan lima
+ * belas model penuh berarti 52 MB di satu halaman — mustahil. Pada beberapa
+ * puluh piksel, yang terbaca hanya siluet: tekstur 128 dan geometri yang
+ * dipangkas habis tidak bisa dibedakan dari aslinya.
+ *
+ * Dua anak tangga, bukan satu, karena beberapa model sudah low-poly sejak awal
+ * dan `simplify-ratio` adalah batas bawah, bukan target — pada model itu yang
+ * menentukan ukurannya tekstur, bukan geometri.
+ */
+const PROXY_LADDER = [
+  { name: "proxy", texture: 128, ratio: 0.02, error: 0.08 },
+  { name: "proxy kecil", texture: 64, ratio: 0.008, error: 0.14 },
+];
+
+/** Anggaran per proxy. Lima belas × ini masih muat dalam satu section. */
+const PROXY_BUDGET = 300 * 1024;
+
 const DIMINISHING_RETURNS = 0.85;
 
 /** Selisih ukuran yang masih dianggap setara, saat memilih kualitas terbaik. */
@@ -99,6 +120,23 @@ const SIZE_TIE_MARGIN = 1.1;
 
 const FAST = process.argv.includes("--fast");
 const FORCE = process.argv.includes("--force");
+
+/**
+ * Bangun varian proxy. OPT-IN, dan itu konsekuensi dari pengukuran.
+ *
+ *   npm run sync:heritage -- --proxy
+ *
+ * Empat belas dari lima belas model tidak bisa mencapai anggaran proxy selama
+ * biner `ktx` dari KTX-Software belum terpasang: tekstur KTX2/ETC1S 2048x2048
+ * mereka dilewati DIAM-DIAM oleh `--texture-size`, yang tidak bisa mengubah
+ * ukuran tekstur terkompresi tanpa men-transcode lebih dulu. Mencobanya ulang
+ * tiap sync berarti membayar lima menit untuk kegagalan yang sudah diketahui.
+ *
+ * Proxy yang SUDAH ada di disk tetap didaftarkan apa pun modenya, jadi
+ * mematikan bendera ini tidak pernah membuat proxy yang valid hilang dari
+ * manifest atau tersapu penyapu.
+ */
+const PROXY = process.argv.includes("--proxy");
 
 const c = {
   dim: (s) => `\x1b[2m${s}\x1b[0m`,
@@ -110,6 +148,7 @@ const c = {
 };
 
 const mb = (bytes) => `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+const kb = (bytes) => `${Math.round(bytes / 1024)} KB`;
 
 function loadSlugMap() {
   if (!fs.existsSync(SLUG_MAP_FILE)) return {};
@@ -174,8 +213,42 @@ function scanSource(slugMap) {
   return { assets, problems, missingSourceDir: false };
 }
 
+/**
+ * Nama binernya berbeda di Windows, dan itu bukan detail kosmetik.
+ *
+ * `execFileSync` tidak lewat shell, jadi ia mencari berkas dengan nama PERSIS
+ * seperti yang diminta. Di Windows yang ada `npx.cmd`; meminta `npx` menghasilkan
+ * `spawnSync npx ENOENT` — dan karena setiap kegagalan di tangga optimasi memang
+ * ditelan supaya anak tangga berikutnya sempat dicoba, kegagalan ini tidak pernah
+ * muncul ke permukaan. Yang terlihat cuma model yang tidak pernah teroptimasi.
+ *
+ * Memakai `shell: true` juga menyelesaikannya, tetapi itu menyerahkan seluruh
+ * daftar argumen ke penguraian shell — dan nama berkas sumber di sini memang
+ * mengandung titik dan tanda hubung.
+ */
+const WIN = process.platform === "win32";
+const NPX = WIN ? "npx.cmd" : "npx";
+
+/* Seluruh argumen kini melewati shell, jadi yang mengandung spasi WAJIB
+   dikutip di kedua platform — bukan cuma di Windows seperti sebelumnya. */
+const quoted = (arg) => (arg.includes(" ") ? `"${arg}"` : arg);
+
 function runGltfTransform(args) {
-  execFileSync("npx", ["--no-install", "gltf-transform", ...args], {
+  const all = [NPX, "--no-install", "gltf-transform", ...args].map(quoted);
+
+  /* `execSync` dengan SATU string, bukan `execFileSync` dengan daftar argumen
+     plus `shell: true`. Keduanya menjalankan hal yang sama, tetapi yang kedua
+     membuat Node menyalakan DEP0190 pada setiap sync — argumen yang diserahkan
+     ke shell memang tidak di-escape, cuma disambung. Membangun stringnya
+     sendiri membuat penyambungan itu eksplisit dan terlihat, bukan tersembunyi
+     di balik API yang menjanjikan hal lain. */
+  execSync(all.join(" "), {
+    /* `shell: true` wajib di Windows, dan bukan karena kenyamanan.
+
+       Sejak perbaikan CVE-2024-27980, Node menolak menjalankan berkas `.cmd`
+       lewat `execFileSync` tanpa shell dan melempar `EINVAL`. Jadi di sini
+       urutannya mengunci: `npx` tidak ada (ENOENT), `npx.cmd` ditolak (EINVAL),
+       dan hanya `npx.cmd` + shell yang berjalan. */
     stdio: "pipe",
     cwd: ROOT,
     maxBuffer: 64 * 1024 * 1024,
@@ -303,6 +376,85 @@ function optimise(source, dest) {
   return { level: chosen.step.name, overBudget: chosen.size > SIZE_BUDGET, tried: attempts.length };
 }
 
+/**
+ * Bangun varian proxy. Satu berkas, dua percobaan, tanpa pemilihan kualitas.
+ *
+ * Sengaja jauh lebih sederhana daripada `optimise`: di sana pilihan kualitas
+ * penting karena hasilnya yang dilihat orang dari jarak dekat. Di sini tidak —
+ * yang lebih kecil selalu menang selama siluetnya masih berdiri.
+ */
+function makeProxy(source, dest) {
+  let best = null;
+  let lastError = null;
+
+  for (const step of PROXY_LADDER) {
+    const candidate = dest.replace(/\.glb$/, `.__${step.name.replace(/\s+/g, "-")}.glb`);
+    try {
+      runGltfTransform([
+        "optimize",
+        source,
+        candidate,
+        "--compress",
+        "draco",
+        "--texture-compress",
+        "webp",
+        "--texture-size",
+        String(step.texture),
+        "--simplify",
+        "true",
+        "--simplify-error",
+        String(step.error),
+        "--simplify-ratio",
+        String(step.ratio),
+      ]);
+    } catch (error) {
+      /* Kenapa gagalnya DICATAT, bukan ditelan: proxy yang tidak jadi membuat
+         object hilang dari globe tanpa satu pun pesan, dan itu jenis kegagalan
+         yang baru ketahuan saat melihat layar. */
+      lastError = (error.stderr?.toString() || error.message || "").trim().slice(-160);
+      if (fs.existsSync(candidate)) fs.rmSync(candidate);
+      continue;
+    }
+
+    const size = fs.statSync(candidate).size;
+    if (best) fs.rmSync(best.path);
+    best = { path: candidate, size, level: step.name };
+    if (size <= PROXY_BUDGET) break;
+  }
+
+  if (!best) {
+    console.log(`  ${c.yellow("proxy gagal")} ${path.basename(dest)} ${c.dim(lastError ?? "")}`);
+    return null;
+  }
+
+  /* Proxy yang tidak kecil BUKAN proxy, dan menyimpannya lebih buruk daripada
+     tidak punya sama sekali: ia menggandakan berat repo untuk berkas yang tetap
+     terlalu mahal dimuat lima belas sekaligus.
+
+     Yang menahannya sekarang bukan tangga ini melainkan sumbernya. Sepuluh dari
+     lima belas model membawa tekstur KTX2/ETC1S 2048x2048, dan `--texture-size`
+     milik gltf-transform DIAM-DIAM melewati tekstur KTX2 — ia tidak bisa
+     mengubah ukurannya tanpa men-transcode lebih dulu. Transcode itu butuh
+     biner `ktx` dari KTX-Software, yang tidak terpasang di mesin ini.
+
+     Jadi yang lolos hanya model yang geometrinya memang bisa disederhanakan dan
+     teksturnya bukan KTX2. Sisanya tidak didaftarkan, dan pemakainya jatuh ke
+     penanda titik. Nol asumsi asset — §1. */
+  if (best.size > PROXY_BUDGET) {
+    fs.rmSync(best.path);
+    if (fs.existsSync(dest)) fs.rmSync(dest);
+    console.log(
+      `  ${" ".repeat(9)} ${c.dim(`${path.basename(dest, ".glb")}`.padEnd(24))} ` +
+        `${" ".repeat(11)} ${c.yellow(kb(best.size).padStart(9))}   ` +
+        `${c.dim(`lewat anggaran ${kb(PROXY_BUDGET)} — tidak didaftarkan`)}`,
+    );
+    return null;
+  }
+
+  fs.renameSync(best.path, dest);
+  return best;
+}
+
 function writeManifest(entries) {
   const body = entries
     .map(
@@ -312,6 +464,10 @@ function writeManifest(entries) {
         `    continent: ${JSON.stringify(e.continent)},\n` +
         `    modelPath: ${JSON.stringify(e.modelPath)},\n` +
         `    bytes: ${e.bytes},\n` +
+        (e.proxyPath
+          ? `    proxyPath: ${JSON.stringify(e.proxyPath)},\n` +
+            `    proxyBytes: ${e.proxyBytes},\n`
+          : "") +
         `  },`,
     )
     .join("\n");
@@ -389,12 +545,41 @@ function main() {
         `${(over ? c.yellow : c.green)(mb(bytes).padStart(9))}   ${note}`,
     );
 
-    entries.push({
+    /* Varian proxy untuk globe di section Dunia.
+
+       Dilewati pada `--fast` (`predev`): membangunnya dua kali per model mahal,
+       dan yang sudah ada tetap berlaku. Yang PENTING, proxy yang ada di disk
+       tetap didaftarkan ke `entries` apa pun modenya — kalau tidak, penyapu di
+       bawah akan menghapusnya sebagai berkas tak terpakai. */
+    const proxyDest = path.join(outDir, `${asset.slug}-proxy.glb`);
+    const proxyFresh =
+      !FORCE && fs.existsSync(proxyDest) && fs.statSync(proxyDest).mtimeMs >= sourceStat.mtimeMs;
+
+    if (PROXY && !proxyFresh && !FAST) {
+      const made = makeProxy(asset.source, proxyDest);
+      if (made) {
+        const over = made.size > PROXY_BUDGET;
+        console.log(
+          `  ${" ".repeat(9)} ${c.dim(`${asset.slug}-proxy`.padEnd(24))} ` +
+            `${" ".repeat(11)} ` +
+            `${(over ? c.yellow : c.green)(kb(made.size).padStart(9))}   ${c.dim(made.level)}`,
+        );
+      }
+    }
+
+    const entry = {
       slug: asset.slug,
       continent: asset.continent,
       modelPath: `/models/${asset.continent}/${asset.slug}.glb`,
       bytes,
-    });
+    };
+
+    if (fs.existsSync(proxyDest)) {
+      entry.proxyPath = `/models/${asset.continent}/${asset.slug}-proxy.glb`;
+      entry.proxyBytes = fs.statSync(proxyDest).size;
+    }
+
+    entries.push(entry);
   }
 
   /**
@@ -409,7 +594,13 @@ function main() {
    * Karena itu aturannya dibalik: apa pun yang tidak ada di manifest dibuang,
    * bukan hanya berkas .glb yang dikenali.
    */
-  const wanted = new Set(entries.map((e) => `${e.continent}/${e.slug}.glb`));
+  /* Proxy WAJIB ikut didaftarkan. Aturan penyapu di atas dibalik dengan
+     sengaja — apa pun yang tidak ada di sini dibuang — jadi berkas proxy yang
+     tidak disebut akan dihapus persis setelah dibuat. */
+  const wanted = new Set(entries.flatMap((e) => [
+    `${e.continent}/${e.slug}.glb`,
+    ...(e.proxyPath ? [`${e.continent}/${e.slug}-proxy.glb`] : []),
+  ]));
   let swept = 0;
   for (const continent of new Set(Object.values(CONTINENT_ALIASES))) {
     const dir = path.join(PUBLIC_DIR, continent);
