@@ -11,6 +11,7 @@ import { buttonClass } from "@/components/ui/button";
 import { useI18n } from "@/lib/i18n/client";
 import { useInView } from "@/lib/motion/use-in-view";
 import { useStillPreference } from "@/lib/motion/use-still-preference";
+import { useHandoff } from "./handoff";
 import { StrataField } from "@/concepts/shell/strata-field";
 import { A_COPY } from "./copy";
 import { useDiveFilm } from "./use-dive-film";
@@ -43,13 +44,13 @@ const DUST = slot("a-dust");
  *     z-0    lapisan      medan strata, kanvas 2D; paling belakang
  *     z-[1]  kanvas 3D    globe, satu-satunya subjek
  *     z-[2]  debu         di DEPAN subjek; debu di belakang subjek cuma tekstur
- *     z-[3]  cahaya       menutup dari dua sisi di ujung, lalu TINGGAL
  *     z-10   teks
  *
- * Cahaya wajib di ATAS globe dan debu, karena keduanyalah yang sedang ia sapu.
- * Ia tetap di bawah teks: pada saat ia bekerja teks hero sudah lama pergi, dan
- * menaruhnya di atas berarti satu-satunya lapisan yang boleh menutupi teks
- * adalah lapisan yang tidak pernah bertemu teks.
+ * **Panel cahaya penutup tidak lagi di sini.** Ia pindah ke kelompok dua
+ * (`relic.tsx`) bersama seluruh serah terimanya. Alasannya struktural: selama
+ * cahaya hidup di panggung INI, ia menutup pada bingkai ini — lalu komposisi
+ * berikutnya tetap harus digulir untuk didatangi. Di sana ia menutup pada
+ * bingkai yang SAMA dengan tempat komposisi dirakit, dan jaraknya jadi nol.
  *
  * Latar strata berbagi gerbang `useInView` yang sama dengan globe alih-alih
  * memasang pengamatnya sendiri. Satu section, satu pengamat: dua yang mengawasi
@@ -98,6 +99,14 @@ export function Dive({ heritage, marks }: { heritage: Heritage; marks: GlobeMark
      dihitung dua kali sejak `createGlobeMaps` menyimpan kanvasnya. */
   const [passed, setPassed] = useState(false);
 
+  /* Globe juga dilepas begitu bidang cahaya kelompok dua menutup penuh.
+
+     `passed` sendiri datang dari ambang gulir, dan ambang gulir tidak pernah
+     terlewati kalau pengguna berhenti menggulir tepat di titik serah terima —
+     yang justru persis yang diminta terjadi di sana. Tanpa sinyal kedua ini,
+     halaman memegang dua konteks WebGL selama ia diam di situ. */
+  const { sealed } = useHandoff();
+
   useDiveFilm(root, publish, setPassed);
 
 
@@ -131,7 +140,7 @@ export function Dive({ heritage, marks }: { heritage: Heritage; marks: GlobeMark
             `visible` dan bukan `active` supaya berpindah tab tidak melepas dan
             memasang ulang panggungnya. */}
         <div ref={gateRef} className="absolute inset-0 z-[1]">
-          {entered && !passed && (!still || visible) ? (
+          {entered && !passed && !sealed && (!still || visible) ? (
             <GlobeStage
               marks={marks}
               targetSlug={heritage.slug}
@@ -148,28 +157,6 @@ export function Dive({ heritage, marks }: { heritage: Heritage; marks: GlobeMark
           <MediaLayer slot={DUST} sizes="100vw" />
         </div>
 
-        {/* z-[3] · cahaya penutup.
-
-            Lebarnya 62%, bukan 50%, dan angka itu berpasangan dengan gradien di
-            `.light-wipe-*`: bagian pekatnya berhenti di 82%, jadi 0,82 x 62% =
-            50,8% layar — kedua bidang pekat sudah melewati tengah sebelum
-            bertemu. Ujung yang melandai karena itu tidak pernah bertemu ujung
-            melandai lainnya, dan tidak ada pita lebih gelap di garis temunya.
-
-            Keduanya digerakkan `transform` saja; §4 melarang menganimasikan
-            `width` atau `left`. Posisi awalnya dipasang GSAP, bukan CSS —
-            tanpa JavaScript bidang ini duduk diam di tempatnya dan halaman
-            tetap terbaca. */}
-        <div
-          data-dive-light="left"
-          aria-hidden="true"
-          className="light-wipe-l pointer-events-none absolute inset-y-0 left-0 z-[3] w-[62%]"
-        />
-        <div
-          data-dive-light="right"
-          aria-hidden="true"
-          className="light-wipe-r pointer-events-none absolute inset-y-0 right-0 z-[3] w-[62%]"
-        />
 
         <div className="shell relative z-10">
           {/* ══ Sambutan ══════════════════════════════════════════════ */}
@@ -206,7 +193,14 @@ export function Dive({ heritage, marks }: { heritage: Heritage; marks: GlobeMark
             <div className="mt-9 flex flex-wrap items-start gap-x-6 gap-y-5 sm:gap-x-8">
               <HeroStat value={marks.length} label={A_COPY.chipSites[locale]} />
               <HeroStat value={continents} label={A_COPY.chipContinents[locale]} divided />
-              <div data-dive-chip className="border-l border-line pl-6 sm:pl-8">
+              {/* Format disembunyikan di layar paling sempit.
+
+                  Ia satu-satunya dari ketiganya yang bukan angka, dan
+                  satu-satunya yang melebar sampai ke sisi kanan bingkai —
+                  tempat globe duduk di ponsel. Dua angka di kiri sudah
+                  menyampaikan kepadatan koleksi; yang ketiga bisa menunggu
+                  sampai ada lebar untuk menampungnya. */}
+              <div data-dive-chip className="hidden border-l border-line pl-6 sm:block sm:pl-8">
                 <p className="font-display text-xl leading-none text-ink-soft sm:text-2xl">
                   {A_COPY.chipFormatValue[locale]}
                 </p>

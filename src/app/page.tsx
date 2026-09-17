@@ -2,6 +2,7 @@ import { HERITAGE, featuredHeritage } from "@/data/registry";
 import { ConceptFrame } from "@/concepts/shell/concept-frame";
 import { Dive } from "@/concepts/a/dive";
 import { Relic } from "@/concepts/a/relic";
+import { HandoffProvider } from "@/concepts/a/handoff";
 import { World } from "@/concepts/a/world";
 import { Invite } from "@/concepts/a/invite";
 
@@ -55,8 +56,15 @@ export default function HomePage() {
 
   return (
     <ConceptFrame concept="a" ctaHref={heritage ? `/heritage/${heritage.slug}` : undefined}>
-      {heritage ? <Dive heritage={heritage} marks={marks} /> : null}
-      {heritage ? <Relic heritage={heritage} /> : null}
+      {/* Kelompok satu dan kelompok dua berbagi satu boolean: sudahkah bidang
+          cahaya menutup. Kelompok dua yang mengumumkan, kelompok satu yang
+          mendengarkan — dan tanpa itu halaman memegang dua konteks WebGL selama
+          pengguna berhenti menggulir di titik serah terima. Lihat
+          `handoff.tsx`. */}
+      <HandoffProvider>
+        {heritage ? <Dive heritage={heritage} marks={marks} /> : null}
+        {heritage ? <Relic heritage={heritage} /> : null}
+      </HandoffProvider>
       <World points={points} />
       {heritage ? <Invite heritage={heritage} /> : null}
     </ConceptFrame>

@@ -12,6 +12,7 @@ import { useMotionTier } from "@/lib/motion/use-motion-tier";
 import { EASE, ScrollTrigger, gsap, useScrollScene } from "@/lib/motion/use-scroll-scene";
 import { BeamField, type BeamLink } from "@/concepts/shell/beam";
 import { MetadataChip } from "@/concepts/shell/metadata-chip";
+import { useHandoff } from "./handoff";
 import { A_COPY } from "./copy";
 
 /**
@@ -98,6 +99,7 @@ export function Relic({ heritage }: { heritage: Heritage }) {
    * sudah terurai dan sudut kamera yang sudah diatur pengguna.
    */
   const still = useStillPreference();
+  const { seal } = useHandoff();
   const [viewerGate, { visible }] = useInView<HTMLDivElement>({ rootMargin: "200px" });
 
   const [lat, lon] = heritage.coordinates;
@@ -109,6 +111,11 @@ export function Relic({ heritage }: { heritage: Heritage }) {
          terlihat penuh dan wadah tetap di tempatnya — yang dilepas hanya
          urutan perakitannya, bukan satu pun isinya. */
       if (still) {
+        /* Tidak satu pun ScrollTrigger dipasang, jadi tidak ada yang akan
+           membuka komposisi nanti — ia wajib sudah terbuka sekarang. Panel
+           cahaya disembunyikan lewat CSS (`motion-reduce:hidden`) karena di
+           sini kedua kelompok berdiri berurutan dalam aliran biasa, dan bidang
+           yang menutup tidak punya pekerjaan. */
         setBuilt(true);
         return;
       }
@@ -125,25 +132,106 @@ export function Relic({ heritage }: { heritage: Heritage }) {
         onEnterBack: () => setReleased(false),
       });
 
-      gsap.set("[data-obj-card]", { opacity: 0 });
+      /* Keadaan awal dipasang GSAP, bukan CSS. Tanpa JavaScript seluruh
+         komposisi tetap berdiri terbaca alih-alih hilang sama sekali. */
+      gsap.set(node.querySelectorAll("[data-obj-card]"), { opacity: 0 });
+      gsap.set(node.querySelector("[data-build]"), { autoAlpha: 0 });
+      gsap.set(node.querySelector('[data-light="left"]'), { xPercent: -101 });
+      gsap.set(node.querySelector('[data-light="right"]'), { xPercent: 101 });
 
-      gsap
-        .timeline({
-          defaults: { ease: EASE.enter },
-          /* `top 96%`, bukan `top 72%`: animasi masuk harus bermain saat
-             judulnya MELINTASI tepi bawah layar — di atas cahaya yang baru
-             menutup — bukan seperlima layar sesudah ia sebenarnya sudah
-             terlihat. */
-          scrollTrigger: { trigger: node, start: "top 96%", once: true },
-        })
-        .from("[data-reveal]", { autoAlpha: 0, y: 24, duration: 0.7, stagger: 0.09 }, 0)
-        .from("[data-obj-frame]", { autoAlpha: 0, y: 26, scale: 0.97, duration: 0.85 }, 0.15)
-        /* Beam baru boleh diukur di sini, dan tidak sedetik pun lebih awal. */
-        .add(() => setBuilt(true))
-        .to("[data-obj-card]", { opacity: 1, duration: 0.5, stagger: 0.18 }, ">+=0.45");
+      /* ── DUA PICU BERANTAI, keduanya BERBASIS WAKTU ──────────────────
+         Bukan ter-scrub, dan itu seluruh perbaikannya.
+
+         Selama penutupan digerakkan gulir, melihat komposisi berikutnya selalu
+         menuntut gulir tambahan — tiga sesi dipakai memangkas jaraknya dari
+         949px ke 463px ke 120px, dan ia tidak pernah bisa sampai nol. Begitu ia
+         dipicu lalu berjalan sendiri atas waktu, jaraknya nol menurut definisi:
+         pengguna berhenti menggulir, dan sisanya terjadi.
+
+             picu 1   kelompok satu berakhir  →  bidang menutup dari dua sisi
+             picu 2   bidang tertutup penuh   →  "Yang Hilang" dirakit
+
+         Rantainya dibuat dengan `onComplete`, bukan dengan menumpuk keduanya
+         pada satu timeline berlabel waktu: yang kedua HARUS mulai dari keadaan
+         akhir yang pertama, dan `onComplete` menjaminnya bahkan ketika
+         kecepatannya diubah di tengah jalan — lihat percepatan di bawah.
+
+         `once` karena ia perakitan, bukan keadaan. Sesuatu yang dirakit ulang
+         tiap kali dilewati berhenti terbaca sebagai sesuatu yang dibangun.
+
+         Di-*ease*, bukan linear. Aturan "scrub wajib linear" berlaku bagi yang
+         terikat gulir supaya bisa ditelusuri balik persis; timeline ini tidak
+         terikat gulir, jadi easing justru yang benar. */
+
+      const assemble = gsap.timeline({ paused: true, defaults: { ease: EASE.enter } });
+      assemble
+        /* 1 · wadah dan objectnya. Subjeknya lebih dulu; kartu dan garis
+           sesudahnya melekat padanya, jadi ia yang harus ada duluan. */
+        .from("[data-obj-frame]", { autoAlpha: 0, y: 22, scale: 0.97, duration: 0.7 }, 0)
+        /* 2 · tiga kartu keterangan, `opacity` SAJA — lihat jebakan kedua di
+           kepala berkas ini. */
+        .to("[data-obj-card]", { opacity: 1, duration: 0.45, stagger: 0.14 }, 0.45)
+        /* 3 · garis baru boleh diukur setelah ketiga kartunya berdiri diam. */
+        .add(() => setBuilt(true), 1.1)
+        /* 4 · teks kiri, terakhir. */
+        .from("[data-reveal]", { autoAlpha: 0, y: 22, duration: 0.6, stagger: 0.08 }, 1.35);
+
+      const close = gsap.timeline({
+        paused: true,
+        defaults: { ease: EASE.enter },
+        onComplete: () => {
+          /* Globe dilepas PERSIS di sini: bidangnya sudah menutup penuh, jadi
+             melepasnya tidak terlihat sama sekali. Ini juga satu-satunya tempat
+             yang TAHU kapan itu terjadi — ambang gulir tidak pernah terlewati
+             kalau pengguna berhenti menggulir di titik picu. */
+          seal();
+          assemble.play();
+        },
+      });
+      close
+        .to('[data-light="left"]', { xPercent: 0, duration: 0.85 }, 0)
+        .to('[data-light="right"]', { xPercent: 0, duration: 0.85 }, 0)
+        /* Komposisi dibuka SETELAH bidangnya penuh — kalau tidak, ia terlihat
+           sekejap di atas globe yang belum tertutup. */
+        .set(node.querySelector("[data-build]"), { autoAlpha: 1 });
+
+      ScrollTrigger.create({
+        trigger: node,
+        start: "top top",
+        once: true,
+        onEnter: () => close.play(),
+      });
+
+      /* ── Menggulir MEMPERCEPAT, bukan ditahan ────────────────────────
+         Pemilik project memilih ini ketimbang memaku panggung sampai rangkaian
+         selesai, dan pilihannya tepat: halaman yang menolak bergerak saat
+         digulir terasa rusak, bukan terasa sinematik. §4 juga melarang
+         mencegat `wheel`/`touch` untuk memaksa urutan.
+
+         Jadi gulir tidak dihalangi — ia mengubah KECEPATAN. Makin cepat
+         digulir, makin cepat rangkaiannya selesai; berhenti menggulir, ia
+         berjalan pada kecepatan normal sampai tuntas. Pengguna yang buru-buru
+         tidak pernah tertahan, dan pengguna yang diam tetap melihat semuanya.
+
+         Kecepatannya mengendap kembali ke 1 lewat `delayedCall` yang
+         diperbarui tiap update: tanpa itu, satu sentakan roda akan meninggalkan
+         timeline berlari empat kali lipat sampai habis. */
+      let decay: gsap.core.Tween | undefined;
+      ScrollTrigger.create({
+        trigger: node,
+        start: "top top",
+        end: "bottom top",
+        onUpdate: (self) => {
+          const running = close.isActive() ? close : assemble.isActive() ? assemble : null;
+          if (!running) return;
+          running.timeScale(1 + Math.min(3, Math.abs(self.getVelocity()) / 900));
+          decay?.kill();
+          decay = gsap.delayedCall(0.18, () => running.timeScale(1));
+        },
+      });
     },
     root,
-    [],
+    [seal],
   );
 
   return (
@@ -159,23 +247,53 @@ export function Relic({ heritage }: { heritage: Heritage }) {
          membayar dua kali untuk kekosongan yang sama — dan kekosongan kedua itu
          persis yang dikeluhkan: setelah cahaya menutup, masih harus digulir
          sebelum ada yang terbaca. */
-      className="relative pt-2 pb-24 sm:pt-3 sm:pb-32"
+      /* **KELOMPOK DUA, ditarik naik menumpuk di atas ekor kelompok satu.**
+
+         `-mt` negatifnya setengah tinggi kelompok satu, dan angka itu
+         berpasangan dengan `HANDOFF` di `dive-beats.ts` — turunannya satu baris:
+         puncak kelompok ini menyentuh atas layar pada gulir `D + M`, sementara
+         globe selesai zoom pada `HANDOFF x D`. Menyamakan keduanya memberi
+         `M = -(1 - HANDOFF) x D`, yaitu setengahnya pada HANDOFF 0,5.
+
+         Karena kelompok ini datang SESUDAH kelompok satu di DOM, panggungnya
+         menggambar di atas panggung sana tanpa satu `z-index` pun yang perlu
+         diadu — jadi panel cahayanya menutupi globe begitu saja.
+
+         Tingginya memberi ruang bagi rangkaian untuk selesai sebelum panggung
+         lepas. Ia TIDAK menahan siapa pun: menggulir di dalamnya mempercepat
+         rangkaiannya, bukan dihalangi.
+
+         Seluruhnya `motion-safe:`. Saat gerak dikurangi tidak satu pun
+         ScrollTrigger dipasang, jadi kedua kelompok wajib kembali berdiri
+         berurutan dalam aliran biasa — tumpang tindih tanpa animasi yang
+         membukanya cuma akan menyembunyikan satu kelompok di balik yang lain. */
+      className="relative motion-safe:-mt-[105svh] motion-safe:h-[185svh] md:motion-safe:-mt-[130svh] md:motion-safe:h-[210svh] motion-reduce:pt-2 motion-reduce:pb-24 sm:motion-reduce:pt-3 sm:motion-reduce:pb-32"
     >
-      {/* Sambungan dari penyelaman.
+      <div className="flex items-center overflow-hidden motion-safe:sticky motion-safe:top-0 motion-safe:h-svh">
+      {/* Panel cahaya — milik KELOMPOK DUA, bukan kelompok satu.
 
-          Penyelaman berakhir dengan dua bidang cahaya yang menutup sampai
-          bertemu di tengah, dan bidang itu dimaksudkan sebagai LATAR section
-          ini — bukan sekadar transisi yang kebetulan berwarna mirip. Panggung
-          lengket di atas meluncur pergi sementara bidang ini sudah berdiri di
-          bawahnya, jadi yang diserahkan adalah permukaan yang sama persis.
+          Di sana ia menutup pada bingkai hero, lalu komposisi ini tetap harus
+          digulir untuk didatangi. Di sini ia menutup pada bingkai yang SAMA
+          dengan tempat komposisi dirakit, dan itu yang membuat jaraknya nol.
 
-          Memudar ke bawah, bukan pekat sepanjang section: cahaya pertama jatuh
-          di puncak penggalian dan mengendap ke kapur di bawahnya — bahasa yang
-          sama dengan `.stage-backdrop`. Ia `aria-hidden` dan tidak menerima
-          pointer; seluruh isinya tetap ada tanpa lapisan ini. */}
+          Lebarnya 62% dengan bagian pekat sampai 82% — aritmetika yang sudah
+          terbukti di `globals.css`: 0,82 x 62% = 50,8% layar, jadi kedua bidang
+          PEKAT sudah melewati tengah sebelum bertemu, dan ujung yang melandai
+          hanya pernah jatuh di atas bagian pekat panel seberangnya. Dua gradien
+          yang sama-sama melandai TIDAK boleh bertemu di tengah: hasilnya 75%,
+          bukan 100%, dan yang terlihat pita lebih gelap persis di garis temunya.
+
+          Keduanya digerakkan `transform` saja; §4 melarang menganimasikan
+          `width` atau `left`. */}
       <div
+        data-light="left"
         aria-hidden="true"
-        className="light-field pointer-events-none absolute inset-x-0 top-0 h-[64svh]"
+        className="light-wipe-l pointer-events-none absolute inset-y-0 left-0 z-0 w-[62%] motion-reduce:hidden"
+      />
+      <div
+        data-light="right"
+        aria-hidden="true"
+        className="light-wipe-r pointer-events-none absolute inset-y-0 right-0 z-0 w-[62%] motion-reduce:hidden"
       />
 
       {/* `lg:items-start`, bukan `items-center`.
@@ -190,7 +308,15 @@ export function Relic({ heritage }: { heritage: Heritage }) {
           kiri, object tetap di kanan. Yang bergeser cuma perataan vertikalnya.
           Di bawah `lg` susunannya sudah bertumpuk, jadi ponsel tidak tersentuh
           sama sekali. */}
-      <div className="shell relative grid items-center gap-12 lg:grid-cols-12 lg:items-start lg:gap-8">
+      {/* TANPA `w-full`: di dalam panggung yang `flex`, `w-full` menimpa lebar
+          milik `.shell` sehingga kisinya melebar dari tepi ke tepi layar —
+          terukur, teks kiri terpotong dan kartu koordinat menggantung keluar.
+          `.shell` sudah punya lebar dan `margin-inline: auto` sendiri, dan
+          margin auto memang memusatkan item flex. */}
+      <div
+        data-build
+        className="shell relative z-10 grid items-center gap-6 sm:gap-12 lg:grid-cols-12 lg:items-start lg:gap-8"
+      >
         {/* ══ Kiri — kenapa object ini ada di sini ══════════════════ */}
         <div className="lg:col-span-4">
           <span data-reveal aria-hidden="true" className="carved-edge" />
@@ -207,7 +333,13 @@ export function Relic({ heritage }: { heritage: Heritage }) {
           <p data-reveal className="mt-5 text-sm leading-[1.75] text-ink-muted">
             {A_COPY.lossBody[locale]}
           </p>
-          <p data-reveal className="mt-5 text-sm leading-[1.75] text-ink-dim italic">
+          {/* Kalimat penutup disembunyikan di bawah `lg`.
+
+              Komposisi ini kini berdiri di satu layar, dan terukur pada 375x780
+              ia setinggi 857px — lebih tinggi daripada layarnya. Dua keterangan
+              pendukung dilepas supaya judul, paragraf utama, object, dan CTA-nya
+              muat utuh. Yang hilang pendukung, bukan isi. */}
+          <p data-reveal className="mt-5 hidden text-sm leading-[1.75] text-ink-dim italic lg:block">
             {A_COPY.lossClose[locale]}
           </p>
           <div data-reveal className="mt-8">
@@ -244,7 +376,12 @@ export function Relic({ heritage }: { heritage: Heritage }) {
               lebar, sehingga ketiga kartu di dalamnya diposisikan terhadap
               `stage` — bukan terhadap pembungkusnya. Di bawah `lg` ia kembali
               jadi baris biasa di bawah penampil. */}
-          <div className="mt-5 flex flex-wrap gap-2 lg:contents">
+          {/* Ketiga kartu keterangan juga hanya dari `lg` ke atas — alasan yang
+              sama, dan tanpa biaya: garis beam memang tidak pernah digambar di
+              bawah `lg`, jadi menyembunyikan kartunya tidak menghapus satu garis
+              pun. Koordinat, periode, dan peradaban tetap lengkap satu ketukan
+              jauhnya di halaman warisan. */}
+          <div className="mt-5 hidden flex-wrap gap-2 lg:contents">
             <MetadataChip
               data-obj-card
               data-beam="a-obj-coord"
@@ -287,6 +424,7 @@ export function Relic({ heritage }: { heritage: Heritage }) {
             />
           ) : null}
         </div>
+      </div>
       </div>
     </section>
   );

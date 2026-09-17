@@ -64,9 +64,17 @@ const RIGHT_BIAS = 0.32;
  * tersisa di bingkai tinggal serpihan.
  *
  * Sekarang kebalikannya: bolanya harus terlihat BANYAK, duduk di kanan-bawah
- * dan sedikit ke tengah. Biasnya dipangkas ke sekitar seperlima, dan
- * ketinggiannya nyaris disamakan dengan desktop supaya ukurannya tetap besar
- * tanpa perlu didorong keluar bingkai untuk memberi ruang teks.
+ * dan sedikit ke tengah. Ketinggiannya nyaris disamakan dengan desktop supaya
+ * ukurannya tetap besar.
+ *
+ * Bias TURUN-nya kemudian dinaikkan lagi ke 0,34, dan itu bukan pembatalan
+ * melainkan batas yang ditemukan dengan melihat layar 375px: pada 0,16 bolanya
+ * memang besar, tetapi puncaknya naik sampai ke belakang paragraf pembuka dan
+ * teksnya berdiri di atas permukaan bumi yang belang terang-gelap. Aturan
+ * pemilik project mengalahkan setiap saran estetis — visual tinggi tidak boleh
+ * membuat halaman sulit dipakai. Didorong turun, bolanya mengisi sepertiga
+ * bawah bingkai: masih besar, masih jelas bola, dan tidak satu baris teks pun
+ * berdiri di atasnya.
  *
  * Dihitung dari RASIO ASPEK kanvas, bukan dari breakpoint. Aspek bereaksi pada
  * rotasi layar dan pada tiap perubahan ukuran tanpa media query kedua yang
@@ -77,8 +85,8 @@ const PORTRAIT = {
   until: 0.72,
   /** Di atas rasio ini penempatannya sepenuhnya bentuk lanskap. */
   from: 1.0,
-  right: 0.2,
-  down: 0.16,
+  right: 0.22,
+  down: 0.34,
   /** Pengali ketinggian: lebih dekat berarti bola lebih besar. */
   altitude: 0.92,
 };

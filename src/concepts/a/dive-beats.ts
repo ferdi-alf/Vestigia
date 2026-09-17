@@ -26,7 +26,6 @@
  *   0,06–0,32  turn     globe berputar seiring scroll · teks hero mundur
  *   0,32–0,50  close    kamera jatuh ke permukaan · jembatan dibaca
  *   0,50–1,00  enter    menembus kerak, selesai pada 0,60 lalu ditahan
- *   0,42–0,60  cahaya   MEMOTONG `enter` — lihat LIGHT_TO di bawah
  *
  * Animasi masuk sengaja TIDAK jadi keadaan. Ia satu-satunya gerak di section ini
  * yang tidak dipegang scroll, dan mencampurnya ke dalam progres akan membuat
@@ -101,7 +100,7 @@ export const ALTITUDE: readonly { at: number; value: number }[] = [
   { at: STATE.turn.to, value: 4.3 },
   { at: STATE.close.to, value: 1.02 },
   /* Penembusan SELESAI pada 0,6, bukan pada 1,0 — dan angka itu berpasangan
-     dengan `LIGHT_TO`. Setelah cahaya menutup penuh tidak ada lagi yang bisa
+     dengan serah terima. Setelah cahaya menutup penuh tidak ada lagi yang bisa
      dilihat di belakangnya, jadi meneruskan gerak kamera sampai ujung section
      berarti menganimasikan sesuatu untuk nol penonton. Sisanya ditahan. */
   { at: 0.6, value: 0.3 },
@@ -159,48 +158,36 @@ export const ENTER_FADE_FROM = 0.18;
    setengah terbuka. */
 
 /**
- * Jendela cahaya, dan kenapa ia BERBEDA di ponsel.
+ * Ambang SERAH TERIMA antara kelompok satu dan kelompok dua.
  *
- * **Batas atasnya struktural, bukan selera.** Panggung lengket setinggi 100svh
- * di dalam section setinggi H lepas setelah `H - 100` digulir, yaitu pada
- * progres `(H - 100) / H`. Sejak detik itu panggung meluncur ke atas dan section
- * di bawahnya ikut terlihat dari tepi bawah layar.
+ *     kelompok satu   hero + globe yang di-zoom
+ *     kelompok dua    bidang cahaya yang menutup, lalu "Yang Hilang"
+ *                     dan sisa isi index sesudahnya
  *
- *     desktop  260svh  →  lepas pada (260-100)/260 = 0,615
- *     ponsel   210svh  →  lepas pada (210-100)/210 = 0,524
+ * Progres saat globe selesai jatuh ke permukaan. Di titik inilah kelompok satu
+ * berakhir dan kelompok dua dipicu.
  *
- * Cahaya WAJIB tertutup penuh sebelum angka itu. Versi pertama menutup pada
- * 0,80 — jauh sesudahnya — dan akibatnya persis yang dilaporkan pemilik project:
- * "Yang Hilang" sudah mengintip dari bawah sementara cahayanya masih setengah
- * menutup, sehingga urutan yang diminta jadi terbalik.
+ * **Yang berubah, dan kenapa angka jendela cahaya hilang dari berkas ini.**
+ * Dulu penutupan digerakkan GULIR, jadi ia butuh dua angka: kapan mulai dan
+ * kapan selesai. Tiga sesi dipakai memangkas jaraknya — 949px, 463px, 120px —
+ * dan ia tidak pernah bisa sampai nol, karena selama penutupan dan komposisi
+ * berikutnya sama-sama digerakkan gulir, melihat yang kedua selalu menuntut
+ * gulir tambahan.
  *
- * Satu angka tidak bisa melayani keduanya. Memakai 0,60 membuat ponsel rusak;
- * memakai 0,50 membuat desktop menyeret bidang polos jauh lebih lama daripada
- * perlu. Jadi jendelanya mengikuti breakpoint — `useScrollScene` sudah
- * menyediakan `compact`, jadi tidak ada media query kedua yang harus dijaga
- * tetap sinkron.
+ * Sekarang penutupan dan perakitan adalah satu timeline BERBASIS WAKTU di
+ * `relic.tsx`, dipicu sekali di ambang ini. Yang tersisa di sini cuma titik
+ * picunya — satu angka, bukan jendela.
  *
- * Yang dijaga sama di keduanya: saat panggung mulai meluncur, layarnya SUDAH
- * jadi satu bidang cahaya penuh. Yang meluncur pergi bukan lagi pemandangan
- * melainkan bidang polos, dan section berikutnya naik di belakang bidang yang
- * sewarna persis — jadi yang terlihat bukan sambungan, melainkan judul yang
- * muncul di tengah cahaya.
+ * **Angka ini berpasangan dengan margin negatif kelompok dua**, dan pasangannya
+ * satu baris aritmetika. Dengan tinggi kelompok satu = D dan margin kelompok
+ * dua = M, puncak kelompok dua menyentuh atas layar pada gulir `D + M`,
+ * sementara ambang ini jatuh pada `HANDOFF x D`. Menyamakan keduanya memberi
+ * `M = -(1 - HANDOFF) x D` — pada HANDOFF 0,5 itu setengah tinggi kelompok satu.
+ *
+ * Mengubah salah satunya tanpa yang lain mengembalikan persis jarak yang baru
+ * saja dihapus.
  */
-export const LIGHT = { from: 0.42, to: 0.62 } as const;
-export const LIGHT_COMPACT = { from: 0.34, to: 0.53 } as const;
-
-/* ── Kenapa 0,62 dan bukan 0,60 ────────────────────────────────────────
-   Menutup 28px SEBELUM panggung lepas memang menjamin section berikutnya tidak
-   pernah mengintip — tetapi ia juga menjamin ada jarak. Diukur: bidang tertutup
-   pada gulir 1108, bagian pertama "Yang Hilang" baru masuk bingkai pada 1146.
-
-   Digeser ke 0,62 keduanya bertemu: bidang menutup persis saat guratan dan
-   kicker "Yang Hilang" melintasi tepi bawah layar. Yang dikorbankan sekitar 6px
-   di mana panggung sudah mulai meluncur sementara celah cahaya tinggal beberapa
-   piksel — dan yang mengintip di celah itu adalah puncak `Relic` yang isinya
-   bidang cahaya juga, sewarna persis. Tidak ada satu pun teks yang bocor.
-
-   Angka ponsel mengikuti aritmetika yang sama pada tinggi sectionnya sendiri. */
+export const HANDOFF = STATE.close.to;
 
 /** 0 sebelum keadaan mulai, 1 setelah selesai. Linear di dalamnya. */
 export function stateProgress(progress: number, name: StateName): number {
