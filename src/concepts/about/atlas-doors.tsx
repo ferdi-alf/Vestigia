@@ -9,6 +9,8 @@ import type { MapPoint } from "@/components/landing/types";
 import { useI18n } from "@/lib/i18n/client";
 import { EASE, gsap, useScrollScene } from "@/lib/motion/use-scroll-scene";
 import { BeamField, type BeamLink } from "@/concepts/shell/beam";
+import SpotlightCard from "@/components/SpotlightCard";
+import { ACCENT, oklchToRgb } from "@/lib/three/oklch";
 import { cn } from "@/lib/cn";
 import { ABOUT_COPY } from "./copy";
 
@@ -222,82 +224,72 @@ export function AtlasDoors({ points }: { points: MapPoint[] }) {
           >
             {anchors.map(({ continent, count, slug }) => {
               const info = CONTINENT_INFO[continent];
+              /* Identitas benua kini dibawa SOROTNYA, bukan sebuah garis.
+
+                 Pita warna di tepi kartu dibuang atas permintaan pemilik
+                 project. Membuangnya begitu saja akan memutus warna yang
+                 menghubungkan kartu ini dengan penandanya di peta — jadi hue
+                 yang sama dipindahkan ke `spotlightColor` milik `SpotlightCard`.
+                 Warnanya tetap ada; yang hilang cuma garisnya. */
+              const [r, g, b] = oklchToRgb(ACCENT.lightness, ACCENT.chroma, info.hue);
+              const glow =
+                `rgba(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)}, 0.3)` as const;
               return (
                 <Link
                   key={continent}
                   data-door
                   data-beam={`about-card-${continent}`}
                   href={`/heritage/${slug}`}
-                  /* `--lit` ditulis langsung ke gaya, bukan lewat state:
-                     sorotnya milik CSS, dan merender ulang pohon komponen demi
-                     satu angka opacity adalah biaya yang tidak perlu. Keadaan
-                     `hovered` tetap React karena ia menentukan beam mana yang
-                     digambar — itu memang perubahan struktur. */
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.setProperty("--lit", "1");
-                    setHovered(continent);
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.setProperty("--lit", "0");
-                    setHovered(null);
-                  }}
-                  onFocus={(e) => {
-                    e.currentTarget.style.setProperty("--lit", "1");
-                    setHovered(continent);
-                  }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.setProperty("--lit", "0");
-                    setHovered(null);
-                  }}
-                  className={cn(
-                    /* `.raking-card` — sapuan cahaya dari KIRI, arah yang sama
-                       dengan matahari di seluruh situs. Kelasnya sudah ada di
-                       `globals.css` tetapi tidak pernah dipakai konsep A;
-                       kartunya selama ini cuma border yang berganti warna. */
-                    "raking-card group relative isolate overflow-hidden rounded-2xl border bg-surface transition-colors",
-                    /* Kartu tinggi di bawah `lg`, BARIS ramping dari `lg` ke
-                       atas. Bentuk lamanya disetel untuk lima kartu berjajar
-                       selebar halaman; lima di antaranya ditumpuk pada kolom
-                       sepertiga akan jauh melampaui tinggi petanya. */
-                    "flex flex-col justify-between p-5",
-                    "lg:flex-row lg:items-center lg:justify-between lg:gap-3 lg:px-4 lg:py-3.5",
-                    hovered === continent ? "border-line-strong" : "border-line hover:border-line-strong",
-                  )}
-                >
-                  {/* Aksen benua — penanda wayfinding yang sama dengan yang
-                      dipakai peta, jadi benua yang sama selalu berwarna sama di
-                      seluruh situs ini.
+                  /* `hovered` tetap state React karena ia memutuskan beam mana
+                     yang digambar — itu perubahan struktur, bukan gaya.
 
-                      Pindah tepi mengikuti bentuk kartunya: pada kartu yang
-                      lebar ia garis judul di tepi atas, pada baris yang ramping
-                      ia penanda di tepi kiri. */}
-                  <span
-                    aria-hidden="true"
-                    className="absolute inset-x-0 top-0 h-0.5 lg:inset-x-auto lg:inset-y-0 lg:left-0 lg:h-auto lg:w-0.5"
-                    style={{ backgroundColor: `oklch(0.48 0.13 ${info.hue})` }}
-                  />
-                  <div className="min-w-0">
-                    <h3 className="font-display text-2xl leading-none text-ink lg:text-xl">
-                      {info.name[locale]}
-                    </h3>
-                    {/* Dua baris, bukan dipotong satu baris. Kolom selebar ini
-                        memuat sekitar empat puluh huruf, dan tagline benua
-                        semuanya lebih panjang — memotongnya di tengah kata
-                        terbaca sebagai kerusakan, bukan sebagai ringkasan. */}
-                    <p className="mt-3 text-xs leading-relaxed text-ink-muted lg:mt-1.5 lg:line-clamp-2">
-                      {info.tagline[locale]}
+                     Yang HILANG dari sini: sepasang penulis `--lit` di keempat
+                     handler. Sorotnya kini milik `SpotlightCard`, dan dua
+                     sistem yang sama-sama menyalakan sorot pada elemen yang
+                     sama adalah kepemilikan ganda yang dilarang §6. */
+                  onMouseEnter={() => setHovered(continent)}
+                  onMouseLeave={() => setHovered(null)}
+                  onFocus={() => setHovered(continent)}
+                  onBlur={() => setHovered(null)}
+                  className="group block rounded-2xl"
+                >
+                  <SpotlightCard
+                    spotlightColor={glow}
+                    className={cn(
+                      "h-full rounded-2xl transition-colors",
+                      "flex flex-col justify-between p-5",
+                      /* Baris ramping dari `lg` ke atas: bentuk kartu tinggi
+                         disetel untuk lima kartu berjajar selebar halaman, dan
+                         lima di antaranya ditumpuk pada kolom sepertiga akan
+                         jauh melampaui tinggi petanya. */
+                      "lg:flex-row lg:items-center lg:justify-between lg:gap-3 lg:px-4 lg:py-3.5",
+                      hovered === continent && "border-line-strong",
+                    )}
+                  >
+                    <div className="min-w-0">
+                      <h3 className="font-display text-2xl leading-none text-ink lg:text-xl">
+                        {info.name[locale]}
+                      </h3>
+                      {/* Dua baris, bukan dipotong satu baris. Kolom selebar
+                          ini memuat sekitar empat puluh huruf, dan tagline
+                          benua semuanya lebih panjang — memotongnya di tengah
+                          kata terbaca sebagai kerusakan, bukan ringkasan. */}
+                      <p className="mt-3 text-xs leading-relaxed text-ink-muted lg:mt-1.5 lg:line-clamp-2">
+                        {info.tagline[locale]}
+                      </p>
+                    </div>
+
+                    {/* Angkanya jadi subjek: yang dibaca lebih dulu adalah
+                        BERAPA, bukan kata "situs". */}
+                    <p className="mt-6 flex items-baseline gap-1.5 lg:mt-0 lg:shrink-0 lg:flex-col lg:items-end lg:gap-0.5">
+                      <span className="font-display text-3xl leading-none tabular-nums text-ink lg:text-2xl">
+                        {String(count).padStart(2, "0")}
+                      </span>
+                      <span className="text-[0.6rem] tracking-[0.16em] text-ink-dim uppercase">
+                        {ABOUT_COPY.mapSites[locale]}
+                      </span>
                     </p>
-                  </div>
-                  {/* Angkanya jadi subjek, sejalan dengan chip metadata: yang
-                      dibaca lebih dulu adalah BERAPA, bukan kata "situs". */}
-                  <p className="mt-6 flex items-baseline gap-1.5 lg:mt-0 lg:shrink-0 lg:flex-col lg:items-end lg:gap-0.5">
-                    <span className="font-display text-3xl leading-none tabular-nums text-ink lg:text-2xl">
-                      {String(count).padStart(2, "0")}
-                    </span>
-                    <span className="text-[0.6rem] tracking-[0.16em] text-ink-dim uppercase">
-                      {ABOUT_COPY.mapSites[locale]}
-                    </span>
-                  </p>
+                  </SpotlightCard>
                 </Link>
               );
             })}

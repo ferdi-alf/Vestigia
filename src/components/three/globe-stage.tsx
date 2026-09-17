@@ -57,10 +57,16 @@ const RIGHT_BIAS = 0.32;
  * mendatarnya menyempit sehingga pecahan yang sama mendorong bola jauh melewati
  * tepi kanan — bolanya terpotong di tempat yang tidak dipilih siapa pun.
  *
- * Pemilik project memilih potongannya DISENGAJA: setengah bola yang mengintip
- * dari tengah-bawah-kanan, dengan teks berdiri utuh di atas kirinya. Jadi
- * biasnya diperbesar, ditambah bias turun, dan ketinggiannya diturunkan supaya
- * yang terpotong adalah bola BESAR — bukan bola kecil yang kebetulan kena tepi.
+ * Sempat disetel jadi SETENGAH bola yang mengintip dari pojok, dan pemilik
+ * project mengoreksinya setelah melihat di perangkat sungguhan: yang terlihat
+ * cuma sedikit, bukan setengah. Pada layar 375px, bias 0,46 ditambah bias turun
+ * 0,34 mendorong sebagian besar bola keluar dari dua sisi sekaligus, dan yang
+ * tersisa di bingkai tinggal serpihan.
+ *
+ * Sekarang kebalikannya: bolanya harus terlihat BANYAK, duduk di kanan-bawah
+ * dan sedikit ke tengah. Biasnya dipangkas ke sekitar seperlima, dan
+ * ketinggiannya nyaris disamakan dengan desktop supaya ukurannya tetap besar
+ * tanpa perlu didorong keluar bingkai untuk memberi ruang teks.
  *
  * Dihitung dari RASIO ASPEK kanvas, bukan dari breakpoint. Aspek bereaksi pada
  * rotasi layar dan pada tiap perubahan ukuran tanpa media query kedua yang
@@ -71,10 +77,10 @@ const PORTRAIT = {
   until: 0.72,
   /** Di atas rasio ini penempatannya sepenuhnya bentuk lanskap. */
   from: 1.0,
-  right: 0.46,
-  down: 0.34,
+  right: 0.2,
+  down: 0.16,
   /** Pengali ketinggian: lebih dekat berarti bola lebih besar. */
-  altitude: 0.72,
+  altitude: 0.92,
 };
 
 /**

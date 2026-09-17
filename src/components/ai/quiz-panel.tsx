@@ -1,11 +1,13 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Heritage } from "@/data/types";
 import { useI18n } from "@/lib/i18n/client";
 import type { QuizQuestion } from "@/lib/ai/types";
 import { cn } from "@/lib/cn";
 import { buttonClass } from "@/components/ui/button";
+import { Confetti } from "@/components/ui/confetti";
+import { readTokens } from "@/lib/read-tokens";
 
 type Phase = "idle" | "loading" | "playing" | "done";
 
@@ -27,6 +29,25 @@ export function QuizPanel({ heritage }: { heritage: QuizSite }) {
   const [picked, setPicked] = useState<number | null>(null);
   const [correct, setCorrect] = useState(0);
   const [offline, setOffline] = useState(false);
+
+  /* Warna konfeti dibaca dari token yang berlaku pada panel INI, bukan
+     ditulis sebagai hex. Kanvas tidak mengerti `var(--color-gold)`, jadi
+     nilainya harus diselesaikan lebih dulu — pola yang sama dengan globe dan
+     latar strata. */
+  const panel = useRef<HTMLElement>(null);
+  const [festive, setFestive] = useState<string[]>([]);
+
+  useEffect(() => {
+    const node = panel.current;
+    if (!node) return;
+    const t = readTokens(node, {
+      gold: "--color-gold",
+      bronze: "--color-bronze",
+      ember: "--color-ember",
+      line: "--color-line-strong",
+    });
+    setFestive([t.gold, t.bronze, t.ember, t.line].filter(Boolean));
+  }, []);
 
   const start = useCallback(async () => {
     setPhase("loading");
@@ -68,7 +89,7 @@ export function QuizPanel({ heritage }: { heritage: QuizSite }) {
   const question = questions[index];
 
   return (
-    <section className="panel p-5" aria-label={dict.ai.quiz}>
+    <section ref={panel} className="panel relative p-5" aria-label={dict.ai.quiz}>
       <div className="flex items-baseline justify-between gap-3">
         <h2 className="font-display text-xl text-ink">{dict.ai.quiz}</h2>
         {phase === "playing" ? (
@@ -141,14 +162,44 @@ export function QuizPanel({ heritage }: { heritage: QuizSite }) {
       ) : null}
 
       {phase === "done" ? (
-        <div className="mt-4">
+        <div className="relative mt-4">
+          {/* Konfeti hanya saat ada yang benar. Merayakan nol jawaban benar
+              terbaca sebagai ejekan, bukan sebagai perayaan. */}
+          {correct > 0 && festive.length > 0 ? <Confetti colors={festive} /> : null}
+
           <p className="font-display text-3xl text-gold">
             {dict.ai.quizScore(correct, questions.length)}
           </p>
+
+          {/* Benar dan SALAH, berdampingan.
+
+              Skor tunggal "3 dari 5" sudah memuat keduanya secara aritmetika,
+              tetapi memaksa pembacanya mengurangi sendiri. Yang ingin diketahui
+              orang setelah kuis adalah berapa yang meleset, dan angka itu layak
+              berdiri sendiri. */}
+          <dl className="relative z-20 mt-4 flex gap-3">
+            <div className="flex-1 rounded-xl border border-gold/40 bg-gold/10 px-3.5 py-2.5">
+              <dt className="text-[0.58rem] leading-none tracking-[0.18em] text-ink-dim uppercase">
+                {dict.ai.quizCorrect}
+              </dt>
+              <dd className="mt-1.5 font-display text-2xl leading-none tabular-nums text-ink">
+                {correct}
+              </dd>
+            </div>
+            <div className="flex-1 rounded-xl border border-line px-3.5 py-2.5">
+              <dt className="text-[0.58rem] leading-none tracking-[0.18em] text-ink-dim uppercase">
+                {dict.ai.quizWrong}
+              </dt>
+              <dd className="mt-1.5 font-display text-2xl leading-none tabular-nums text-ink-muted">
+                {questions.length - correct}
+              </dd>
+            </div>
+          </dl>
+
           <button
             type="button"
             onClick={start}
-            className={buttonClass({ variant: "secondary", className: "mt-4" })}
+            className={buttonClass({ variant: "secondary", className: "relative z-20 mt-4" })}
           >
             {dict.ai.quizRestart}
           </button>

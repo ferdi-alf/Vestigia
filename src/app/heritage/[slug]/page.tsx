@@ -91,15 +91,47 @@ export default async function HeritagePage({ params }: Props) {
   return (
     <div data-concept="a" className="concept-ground">
       <div className="mx-auto w-full max-w-[112rem] px-3 pt-5 pb-10 sm:px-4">
+        {/* Dibungkus jadi TOMBOL, bukan teks bertanda panah.
+
+            Halaman ini tidak memasang navbar — object 3D yang menuntut seluruh
+            lebar adalah alasannya — sehingga tautan ini satu-satunya jalan
+            kembali. Sebagai teks polos di pojok kiri atas ia terbaca sebagai
+            keterangan, bukan sebagai kontrol, dan pengguna tidak punya alasan
+            mencobanya. Bingkai, permukaan, dan bidang sentuh yang jelas
+            membuatnya mengumumkan dirinya sendiri. */}
         <Link
           href="/#dunia"
-          className="inline-flex items-center gap-2 py-2 text-sm text-ink-muted transition-colors hover:text-ink"
+          className="group inline-flex items-center gap-2.5 rounded-full border border-line bg-surface/70 py-2 pr-4 pl-2.5 text-sm text-ink-muted transition-colors hover:border-line-strong hover:bg-raised hover:text-ink"
         >
-          <span aria-hidden="true">←</span>
+          <span
+            aria-hidden="true"
+            className="flex h-6 w-6 items-center justify-center rounded-full bg-raised text-ink-soft transition-transform group-hover:-translate-x-0.5"
+          >
+            <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M13 8H3M7 4L3 8l4 4" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
           {dict.nav.explore}
         </Link>
 
-        <div className="mt-2 flex gap-3">
+        {/* Pemilih object di PUNCAK pada layar sempit, mendatar.
+
+            Sebelumnya ia daftar tegak setinggi 60svh di paling bawah halaman —
+            harus ditemukan dengan menggulir melewati seluruh panel keterangan,
+            dan begitu ditemukan ia memakan hampir seluruh layar untuk sesuatu
+            yang tugasnya cuma memilih. Di puncak dan mendatar, kelima belas
+            pilihan terbaca sebagai deretan gambar dan tidak merebut satu piksel
+            pun dari object yang jadi subjek halaman ini. */}
+        <div className="mt-2 overflow-hidden rounded-2xl border border-line bg-surface xl:hidden">
+          <CollectionRail
+            entries={entries}
+            activeSlug={heritage.slug}
+            activeContinent={heritage.continent}
+            layout="strip"
+          />
+        </div>
+
+        <div className="mt-3 flex gap-3 xl:mt-2">
           {/* ── Rail koleksi. 268px — cukup untuk nama warisan terpanjang
               tanpa terpotong, dan tidak lebih. ──────────────────────── */}
           <aside className="hidden h-[72svh] w-[268px] flex-none overflow-hidden rounded-2xl border border-line bg-surface xl:block">
@@ -144,7 +176,7 @@ export default async function HeritagePage({ params }: Props) {
           <div className="overflow-hidden rounded-2xl border border-line bg-surface">
             <DetailPanel heritage={heritage} all={all} />
           </div>
-          <div className="mt-3 h-[60svh] overflow-hidden rounded-2xl border border-line bg-surface">
+          <div className="mt-3 hidden h-[60svh] overflow-hidden rounded-2xl border border-line bg-surface">
             <CollectionRail
               entries={entries}
               activeSlug={heritage.slug}

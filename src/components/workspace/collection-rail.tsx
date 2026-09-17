@@ -45,10 +45,22 @@ export function CollectionRail({
   entries,
   activeSlug,
   activeContinent,
+  layout = "rail",
 }: {
   entries: RailEntry[];
   activeSlug: string;
   activeContinent: Continent;
+  /**
+   * `rail` — kolom tegak yang bergulir sendiri, untuk sisi kiri workspace.
+   * `strip` — baris mendatar yang bergulir ke samping, untuk layar sempit.
+   *
+   * Di ponsel kolom tegak setinggi 60svh memakan hampir seluruh layar untuk
+   * sesuatu yang tugasnya cuma MEMILIH, dan ia duduk di bawah object sehingga
+   * harus ditemukan dengan menggulir jauh. Sebagai baris mendatar di puncak
+   * halaman, kelima belas pilihan terbaca sekaligus sebagai deretan gambar dan
+   * tidak merebut tinggi dari object yang jadi subjeknya.
+   */
+  layout?: "rail" | "strip";
 }) {
   const { locale } = useI18n();
   const [filter, setFilter] = useState<Continent | "all">(activeContinent);
@@ -57,9 +69,10 @@ export function CollectionRail({
      adalah tab yang tidak pernah layak ditekan. */
   const groups = [...new Set(entries.map((e) => e.continent))] as Continent[];
   const shown = filter === "all" ? entries : entries.filter((e) => e.continent === filter);
+  const strip = layout === "strip";
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className={cn("flex min-h-0 flex-col", !strip && "h-full")}>
       {/* ── Pilihan benua ─────────────────────────────────────────────
           Di ATAS daftar, dan itu yang diminta: benua adalah cara koleksi ini
           dibagi, jadi ia harus terbaca sebelum isinya — bukan sebagai
@@ -92,17 +105,31 @@ export function CollectionRail({
           Satu-satunya bagian yang bergulir. Rail-nya sendiri tidak ikut
           bergulir bersama halaman; itu yang membuat workspace ini terbaca
           sebagai alat alih-alih sebagai halaman panjang. */}
-      <ul className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
+      <ul
+        className={cn(
+          "min-h-0 px-2 py-2",
+          strip
+            ? /* Bergulir ke SAMPING. `snap-x` membuat tiap pilihan berhenti
+                 rapi di tepi kiri alih-alih mendarat setengah terpotong —
+                 pada deretan gambar, potongan setengah terbaca sebagai
+                 kerusakan. */
+              "flex snap-x snap-mandatory gap-2 overflow-x-auto"
+            : "flex-1 overflow-y-auto",
+        )}
+      >
         {shown.map((entry) => {
           const on = entry.slug === activeSlug;
           return (
-            <li key={entry.slug}>
+            <li key={entry.slug} className={strip ? "snap-start" : undefined}>
               <Link
                 href={`/heritage/${entry.slug}`}
                 aria-current={on ? "page" : undefined}
                 className={cn(
-                  "group flex items-start gap-3 rounded-lg px-2.5 py-2.5 transition-colors",
+                  "group rounded-lg transition-colors",
                   on ? "bg-raised" : "hover:bg-raised/60",
+                  strip
+                    ? "flex w-[8.5rem] flex-col gap-2 p-2"
+                    : "flex items-start gap-3 px-2.5 py-2.5",
                 )}
               >
                 {/* Gambar lebih dulu, lalu nama.
@@ -112,19 +139,20 @@ export function CollectionRail({
                     pindah ke pojok gambar — ia informasi yang berbeda (wilayah,
                     bukan bentuk), dan membuangnya memutus warna yang
                     menghubungkan daftar ini dengan penyaring di atasnya. */}
-                <span className="relative mt-0.5 flex-none">
+                <span className={cn("relative", strip ? "block" : "mt-0.5 flex-none")}>
                   <span
                     className={cn(
-                      "flex h-11 w-11 items-center justify-center overflow-hidden rounded-lg border transition-colors",
+                      "flex items-center justify-center overflow-hidden rounded-lg border transition-colors",
                       on ? "border-line-strong bg-raised" : "border-line bg-raised/50",
+                      strip ? "aspect-square w-full" : "h-11 w-11",
                     )}
                   >
                     {entry.thumb ? (
                       <Image
                         src={entry.thumb}
                         alt=""
-                        width={44}
-                        height={44}
+                        width={strip ? 120 : 44}
+                        height={strip ? 120 : 44}
                         className="h-full w-full object-contain"
                       />
                     ) : null}
@@ -138,17 +166,21 @@ export function CollectionRail({
                     style={{ backgroundColor: `oklch(0.48 0.13 ${CONTINENT_INFO[entry.continent].hue})` }}
                   />
                 </span>
-                <span className="min-w-0 flex-1">
+                <span className={cn("min-w-0", !strip && "flex-1")}>
                   <span
                     className={cn(
-                      "block truncate font-display text-base leading-tight transition-colors",
+                      "block truncate font-display leading-tight transition-colors",
+                      strip ? "text-sm" : "text-base",
                       on ? "text-ink" : "text-ink-soft group-hover:text-ink",
                     )}
                   >
                     {entry.name[locale]}
                   </span>
                   <span className="mt-0.5 block truncate text-[0.68rem] text-ink-dim">
-                    {entry.country[locale]} · {entry.period[locale]}
+                    {/* Periode dibuang pada strip: lebar 8,5rem tidak memuat
+                        negara DAN periode tanpa keduanya terpotong, dan negara
+                        yang menempatkan situs di peta lebih berguna di sini. */}
+                    {strip ? entry.country[locale] : `${entry.country[locale]} · ${entry.period[locale]}`}
                   </span>
                 </span>
               </Link>
