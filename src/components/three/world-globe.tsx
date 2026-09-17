@@ -420,6 +420,60 @@ function WorldRelic({ mark, dimmed }: { mark: PlacedMark & { proxy: string }; di
 
 /* ── Kamera ─────────────────────────────────────────────────────────────── */
 
+/**
+ * Cahaya kunci yang IKUT KAMERA, bukan yang diam di ruang dunia.
+ *
+ * Ini jawaban atas "kenapa bolanya ada sisi terang dan sisi gelap".
+ *
+ * Sebelumnya `directionalLight` berdiri pada koordinat dunia yang tetap.
+ * Selama BOLANYA yang berputar dan kameranya diam, itu benar: terminatornya
+ * selalu menghadap kita dan yang terlihat cuma lengkung yang membulat. Sejak
+ * bola bisa dipegang, yang bergerak kameranya — dan terminator yang tetap itu
+ * berubah jadi belahan gelap permanen yang bisa didatangi. Memutar ke Asia
+ * bisa mendaratkan pengguna di sisi yang tidak tersinari, dan object yang
+ * berdiri di sana tidak terbaca sama sekali.
+ *
+ * **Menambatkannya ke kamera bukan pelanggaran motif `raking-light`,
+ * melainkan satu-satunya cara menghormatinya di sini.** Arah seni menulisnya
+ * sebagai "satu sumber cahaya rendah dari kiri, selalu kiri" — dan itu aturan
+ * tentang bagaimana GAMBARNYA terbaca, bukan tentang koordinat dunia. Pada
+ * bola yang boleh diputar pengguna, cahaya dunia yang tetap justru MELANGGAR
+ * aturan itu pada separuh sudut pandang.
+ *
+ * `camera.add()` dan bukan menulis posisi tiap frame: anak dari kamera ikut
+ * diperbarui saat matriks kamera diperbarui, jadi tidak ada satu pun pekerjaan
+ * per-frame yang ditambahkan ke jalur panas (§8).
+ */
+function RakingKey() {
+  const camera = useThree((state) => state.camera);
+
+  const light = useMemo(() => {
+    const node = new THREE.DirectionalLight("#fff3e0", 2.6);
+    /* Kiri, sedikit di atas, dan DI DEPAN — dalam ruang kamera. Sumbu -Z
+       menjauh dari kamera, jadi z positif kecil menaruhnya sedikit di belakang
+       bidang kamera dan menghasilkan sapuan yang rendah alih-alih sorotan
+       tegak lurus. */
+    node.position.set(-3.2, 1.1, 1.6);
+    return node;
+  }, []);
+
+  useEffect(() => {
+    camera.add(light);
+    /* Targetnya ikut kamera juga, kalau tidak ia tertinggal di titik asal dunia
+       dan arah cahaya berputar saat kamera bergerak. */
+    camera.add(light.target);
+    light.target.position.set(0, 0, -1);
+
+    return () => {
+      camera.remove(light);
+      camera.remove(light.target);
+      light.dispose();
+    };
+  }, [camera, light]);
+
+  return null;
+}
+
 /** Menggambar satu bingkai saat panggung kembali aktif — buffer basi kalau tidak. */
 function ResumeOnActive({ active }: { active: boolean }) {
   const invalidate = useThree((state) => state.invalidate);
@@ -608,13 +662,17 @@ export function WorldGlobe({
               Yang membuat batu terbaca sebagai batu adalah bayangan panjang
               dari sumber yang rendah — persis bahasa cahaya yang sudah dipakai
               seluruh situs ini: rendah, hangat, dari kiri. */}
-          <hemisphereLight args={["#fff3e0", "#b9a88a", 0.52]} />
-          <directionalLight position={[-4.2, 0.9, 1.4]} intensity={3.1} />
-          <directionalLight position={[2.4, 0.4, -1.8]} intensity={0.25} />
+          <hemisphereLight args={["#fff3e0", "#b9a88a", 0.62]} />
+          {/* Kunci menempel pada kamera — lihat `RakingKey`. Yang tersisa di
+              ruang dunia cuma pengisi lemah dari kanan-belakang, dan itu
+              memang harus tetap di dunia: tugasnya memberi tepi pada limb,
+              bukan menerangi belahan yang sedang dilihat. */}
+          <RakingKey />
+          <directionalLight position={[2.4, 0.4, -1.8]} intensity={0.3} />
 
           <ReliefBody marks={marks} activeContinent={activeContinent} earth={earth} />
 
-          <Environment resolution={32} frames={1} environmentIntensity={0.35}>
+          <Environment resolution={32} frames={1} environmentIntensity={0.42}>
             <Lightformer intensity={1.8} color="#fff1dc" position={[-2, 3, 3]} scale={[8, 8, 1]} />
           </Environment>
 
