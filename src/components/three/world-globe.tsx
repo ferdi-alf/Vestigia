@@ -1,9 +1,10 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Environment, Lightformer, useGLTF } from "@react-three/drei";
+import { Environment, Lightformer, OrbitControls, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
+import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import type { Continent } from "@/data/types";
 import { CONTINENT_INFO } from "@/data/continents";
 import { latLonToVector3 } from "@/lib/geo";
@@ -107,8 +108,14 @@ const MODEL_UP = new THREE.Vector3(0, 1, 0);
  */
 const DRACO_PATH = "/draco/gltf/";
 
-/** Derajat per detik saat bola berputar bebas. */
-const SPIN_SPEED = 4.2;
+/**
+ * Kecepatan putar bebas, dalam satuan `autoRotateSpeed` milik OrbitControls.
+ *
+ * Satuannya BUKAN derajat per detik: nilai 1 berarti satu putaran penuh tiap
+ * tiga puluh detik, jadi 12 derajat per detik. 0,35 menghasilkan 4,2 derajat
+ * per detik — kecepatan yang sama dengan putaran tulisan tangan sebelumnya.
+ */
+const AUTO_ROTATE_SPEED = 0.35;
 
 /**
  * Jarak kamera dari pusat, satuan radius.
@@ -130,18 +137,20 @@ const DISTANCE = 4.0;
 const LAT_CLAMP = 45;
 
 /**
- * Bujur yang harus dihadapkan kamera supaya sebuah titik menghadap kita.
+ * Jepitan yang sama, dinyatakan sebagai sudut polar untuk OrbitControls.
  *
- * `latLonToVector3` menempatkan bujur 0 pada azimut +90 derajat — konsekuensi
- * dari konvensi `phi = (lon + 180) / 360 * 2pi` yang dipakai supaya penanda
- * mendarat tepat pada texel tempat koordinat itu dilukis. Jadi sudut putar
- * bolanya adalah negatif dari azimut titik itu.
+ * Sudut polar diukur DARI kutub utara, jadi lintang `lat` adalah `90 - phi` —
+ * dan jepitan lintang simetris jadi jepitan polar di kedua sisi khatulistiwa.
+ * Diturunkan, bukan ditulis ulang, supaya menyetel `LAT_CLAMP` tetap cukup di
+ * satu tempat.
  */
-function facingRotation(lon: number): number {
-  return -(lon + 90);
-}
+const POLAR_CLAMP = {
+  min: THREE.MathUtils.degToRad(90 - LAT_CLAMP),
+  max: THREE.MathUtils.degToRad(90 + LAT_CLAMP),
+};
 
-/** Rata-rata bujur yang benar melintasi garis tanggal — rata-rata biasa gagal di Pasifik. */
+const TAU = Math.PI * 2;
+
 function meanLon(values: number[]): number {
   if (values.length === 0) return 0;
   let x = 0;
@@ -153,29 +162,17 @@ function meanLon(values: number[]): number {
   return (Math.atan2(y, x) * 180) / Math.PI;
 }
 
-interface WorldView {
-  /** derajat putar bola pada sumbu Y */
-  rot: number;
-  /** derajat lintang yang dipandang kamera */
-  lat: number;
-  /** 1 = berputar bebas, 0 = dipegang */
-  spin: number;
-}
-
 /* ── Bola ───────────────────────────────────────────────────────────────── */
 
 function ReliefBody({
   marks,
   activeContinent,
-  view,
   earth,
 }: {
   marks: WorldMark[];
   activeContinent: Continent | null;
-  view: React.RefObject<WorldView>;
   earth: ReliefColors;
 }) {
-  const group = useRef<THREE.Group>(null);
 
   const maps = useMemo(() => createReliefMaps(earth), [earth]);
   useEffect(
@@ -224,14 +221,13 @@ function ReliefBody({
     [marks],
   );
 
-  useFrame(() => {
-    const node = group.current;
-    if (!node) return;
-    node.rotation.y = ((view.current?.rot ?? 0) * Math.PI) / 180;
-  });
-
+  /* Bolanya DIAM. Dulu grup ini diputar tiap frame untuk mensimulasikan
+     putaran bumi; sejak kamera dipegang OrbitControls, yang bergerak kameranya.
+     Dua sistem yang sama-sama menulis rotasi adalah persis yang dilarang §6,
+     dan seretan pengguna tidak punya tempat untuk mendarat kalau bolanya juga
+     berputar sendiri. */
   return (
-    <group ref={group}>
+    <group>
       <mesh>
         <sphereGeometry args={[RADIUS, ...SEGMENTS]} />
         {/* `map` dari peta warna bumi, dan TANPA `color`.
@@ -424,56 +420,12 @@ function WorldRelic({ mark, dimmed }: { mark: PlacedMark & { proxy: string }; di
 
 /* ── Kamera ─────────────────────────────────────────────────────────────── */
 
-/**
- * Kamera naik-turun pada lintang, bola berputar pada bujur.
- *
- * Memiringkan BOLANYA untuk mencapai lintang akan memiringkan sumbu kutubnya,
- * dan dunia yang utaranya tidak di atas berhenti terbaca sebagai dunia. Jadi
- * yang bergerak kameranya.
- */
-function WorldRig({ view }: { view: React.RefObject<WorldView> }) {
-  const camera = useThree((state) => state.camera);
-  const origin = useMemo(() => new THREE.Vector3(), []);
-
-  useFrame(() => {
-    const lat = ((view.current?.lat ?? 0) * Math.PI) / 180;
-    camera.position.set(0, DISTANCE * Math.sin(lat), DISTANCE * Math.cos(lat));
-    camera.lookAt(origin);
-  });
-
-  return null;
-}
-
 /** Menggambar satu bingkai saat panggung kembali aktif — buffer basi kalau tidak. */
 function ResumeOnActive({ active }: { active: boolean }) {
   const invalidate = useThree((state) => state.invalidate);
   useEffect(() => {
     if (active) invalidate();
   }, [active, invalidate]);
-  return null;
-}
-
-/**
- * Putaran bebas, dan tiga pagar yang membuatnya tidak melanggar §4.
- *
- * §4 melarang "gerak yang berjalan sendiri tanpa pemicu pengguna". Putaran ini
- * diminta eksplisit pemilik project, dan ia dijinakkan begitu rupa sehingga ia
- * lebih tepat disebut keadaan diam yang menunggu daripada animasi yang berjalan:
- *
- *   1. berhenti saat kanvas keluar layar atau tab disembunyikan (`active`)
- *   2. berhenti saat pengguna meminta gerak dikurangi (`still`)
- *   3. berhenti begitu sebuah benua dipilih, dan baru jalan lagi saat dilepas
- */
-function FreeSpin({ advance, active }: { advance: (seconds: number) => void; active: boolean }) {
-  /* Menerima FUNGSI, bukan ref-nya.
-     `react-hooks/immutability` menolak komponen yang menulis ke dalam
-     argumennya sendiri, dan ia benar menolaknya: pemilik kotak `view` adalah
-     `WorldGlobe`, dan komponen ini cuma penyewa yang mengabarkan waktu berlalu.
-     Pola yang sama dipakai `publish` di `use-dive-film`. */
-  useFrame((_, delta) => {
-    if (!active) return;
-    advance(delta);
-  });
   return null;
 }
 
@@ -494,18 +446,30 @@ export function WorldGlobe({
   still: boolean;
 }) {
   const host = useRef<HTMLDivElement>(null);
-  const view = useRef<WorldView>({ rot: 0, lat: 12, spin: 1 });
-
-  /* Satu-satunya jalan `FreeSpin` menyentuh kotak ini, dan ia dimiliki di sini.
-     `spin` yang memutuskan: selama sebuah benua dipilih ia nol, jadi putaran
-     bebas berhenti menulis sebelum tween GSAP di bawah menyentuh apa pun — dua
-     penulis, tidak pernah bersamaan. §6. */
-  const advance = useCallback((seconds: number) => {
-    const v = view.current;
-    if (v.spin <= 0) return;
-    v.rot -= seconds * SPIN_SPEED * v.spin;
-  }, []);
+  const [controls, setControls] = useState<OrbitControlsImpl | null>(null);
   const [earth, setEarth] = useState<ReliefColors | null>(null);
+
+  /**
+   * Apakah bola sudah pernah DIPEGANG pengguna.
+   *
+   * Sekali disentuh, putaran otomatis berhenti dan tidak menyala lagi: sebuah
+   * bola yang merebut kembali kendali beberapa detik setelah dilepas adalah
+   * bola yang melawan pemegangnya. Ia hanya diatur ulang saat pilihan benua
+   * berubah, karena di situ pengguna memang meminta kamera bergerak sendiri.
+   *
+   * Pengaturan ulangnya terjadi SAAT RENDER, bukan di dalam sebuah effect.
+   * Menyetel state di dalam effect berarti satu render tambahan dengan nilai
+   * yang sudah diketahui basi — dan React menyebut pola ini secara eksplisit
+   * untuk state yang harus menyesuaikan diri pada perubahan prop. Membandingkan
+   * prop dengan salinan render sebelumnya membuat penyesuaiannya terjadi
+   * sebelum satu pun piksel digambar.
+   */
+  const [held, setHeld] = useState(false);
+  const [lastContinent, setLastContinent] = useState(activeContinent);
+  if (lastContinent !== activeContinent) {
+    setLastContinent(activeContinent);
+    setHeld(false);
+  }
 
   /* Keenam warna bumi dibaca dari token yang berlaku pada elemen INI, bukan
      dari `:root` — sama seperti globe pembuka, supaya ia mengambil palet
@@ -526,48 +490,104 @@ export function WorldGlobe({
   }, []);
 
   /**
-   * Satu tween, satu pemilik.
+   * Dua pagar supaya kendali 3D tidak pernah merebut gulir halaman.
    *
-   * `rot`, `lat`, dan `spin` semuanya ditulis dari SATU tempat — §6 melarang
-   * dua sistem menggerakkan properti yang sama, dan putaran bebas di `FreeSpin`
-   * sudah memegang `rot` juga. Itu aman karena `spin` yang memutuskan: selama
-   * tween berjalan `spin` sudah nol, jadi `FreeSpin` berhenti menulis sebelum
-   * tween menyentuh apa pun.
+   * OrbitControls menyetel `touchAction: "none"` pada kanvasnya saat tersambung,
+   * dan itu berarti satu jari yang kebetulan mendarat di atas bola TIDAK BISA
+   * lagi menggulir halaman — di ponsel, bola seukuran ini menutupi hampir
+   * seluruh layar. §4 melarang mencegat `touch` untuk memaksa urutan, dan ini
+   * bentuk pencegatan yang paling tidak terduga: pengguna tidak bermaksud
+   * menyentuh apa pun, ia cuma menggulir.
+   *
+   * `pan-y` mengembalikan gerakan tegak kepada peramban dan menyisakan gerakan
+   * mendatar untuk bola. Gulir tetap utuh, dan memutar dunia ke samping —
+   * satu-satunya sumbu yang benar-benar penting di sebuah globe — tetap bisa.
+   *
+   * `enableZoom` mati karena alasan yang sama pada tetikus: roda di atas kanvas
+   * akan memperbesar bola alih-alih menggulir halaman, dan section ini duduk di
+   * tengah perjalanan, bukan di ujungnya.
    */
   useEffect(() => {
-    const v = view.current;
-    if (still) return;
+    /* Dijalankan ketika KENDALINYA siap, bukan ketika kanvasnya siap, dan
+       urutannya itu yang penting.
 
-    if (activeContinent === null) {
-      const tween = gsap.to(v, { spin: 1, duration: 0.9, ease: EASE.enter });
-      return () => {
-        tween.kill();
-      };
+       `ref={setControls}` dipanggil saat commit, sedangkan `connect()` milik
+       OrbitControls berjalan di effect pada commit yang sama — jadi effect ini,
+       yang baru terjadwal oleh `setControls`, dijamin berjalan SETELAH
+       `connect()` selesai. Sempat dicoba dengan satu `requestAnimationFrame`
+       setelah warna bumi siap, dan itu terlalu awal: R3F belum memasang
+       kendalinya, `none` dipasang belakangan, dan jepitan ini kalah balapan.
+
+       Yang dijepit BUKAN kanvasnya. R3F menyambungkan pendengar pointer-nya
+       pada div pembungkus dan `connect()` menyetel `touchAction` pada elemen
+       ITU — terukur di peramban: kanvasnya `auto`, kakeknya `none`. Karena itu
+       yang disapu seluruh keturunan `host`, bukan satu elemen yang ditebak.
+
+       Dicari lewat `host`, bukan lewat `controls.domElement`: menulis ke dalam
+       nilai yang dikembalikan `useState` adalah persis yang dilarang
+       `react-hooks/immutability`. */
+    if (!controls) return;
+    const root = host.current;
+    if (!root) return;
+
+    for (const node of root.querySelectorAll<HTMLElement>("*")) {
+      if (node.style.touchAction === "none") node.style.touchAction = "pan-y";
     }
+  }, [controls]);
+
+  /**
+   * Satu tween, satu pemilik.
+   *
+   * Yang di-tween sekarang SUDUT BOLA KAMERA, bukan rotasi bumi. Polanya sama
+   * dengan `heritage-viewer.tsx`: hitung `Spherical` dari posisi kamera
+   * sekarang, geser theta dan phi, susun ulang posisinya.
+   *
+   * Arah tujuannya diambil dari `latLonToVector3` — fungsi yang SAMA yang
+   * menempatkan kelima belas object. Menghitung azimutnya sendiri berarti
+   * menyalin konvensi bujur ke tempat kedua, dan konvensi yang disalin adalah
+   * konvensi yang suatu saat menyimpang.
+   */
+  useEffect(() => {
+    if (!controls || still || activeContinent === null) return;
 
     const own = marks.filter((m) => m.continent === activeContinent);
     if (own.length === 0) return;
 
-    const targetLon = meanLon(own.map((m) => m.lon));
-    const targetLat = own.reduce((n, m) => n + m.lat, 0) / own.length;
+    const lon = meanLon(own.map((m) => m.lon));
+    const lat = own.reduce((n, m) => n + m.lat, 0) / own.length;
+    const clamped = Math.max(-LAT_CLAMP, Math.min(LAT_CLAMP, lat));
 
-    /* Putaran diambil jalur terpendek dari posisi sekarang, bukan dari nol.
-       Tanpa ini memilih Oseania setelah Amerika bisa memutar bola nyaris satu
-       lingkaran penuh ke arah yang salah. */
-    const want = facingRotation(targetLon);
-    const shortest = v.rot + (((want - v.rot) % 360) + 540) % 360 - 180;
+    const here = new THREE.Spherical().setFromVector3(
+      new THREE.Vector3().subVectors(controls.object.position, controls.target),
+    );
+    const want = new THREE.Spherical().setFromVector3(latLonToVector3(clamped, lon, 1));
 
-    const tween = gsap.to(v, {
-      spin: 0,
-      rot: shortest,
-      lat: Math.max(-LAT_CLAMP, Math.min(LAT_CLAMP, targetLat)),
+    /* Jalur terpendek, bukan selisih mentah. Tanpa ini memilih Oseania setelah
+       Amerika memutar kamera nyaris satu lingkaran penuh ke arah yang salah. */
+    const turn = (((want.theta - here.theta) % TAU) + TAU + Math.PI) % TAU - Math.PI;
+
+    const state = { theta: here.theta, phi: here.phi };
+    const target = new THREE.Spherical(here.radius, want.phi, here.theta);
+    const offset = new THREE.Vector3();
+
+    const tween = gsap.to(state, {
+      theta: here.theta + turn,
+      phi: want.phi,
       duration: 1.15,
       ease: EASE.enter,
+      onUpdate: () => {
+        target.theta = state.theta;
+        target.phi = state.phi;
+        controls.object.position.copy(controls.target).add(offset.setFromSpherical(target));
+        controls.object.lookAt(controls.target);
+        controls.update();
+      },
     });
+
     return () => {
       tween.kill();
     };
-  }, [activeContinent, marks, still]);
+  }, [controls, activeContinent, marks, still]);
 
   return (
     <div ref={host} className="absolute inset-0" data-world-canvas>
@@ -592,19 +612,42 @@ export function WorldGlobe({
           <directionalLight position={[-4.2, 0.9, 1.4]} intensity={3.1} />
           <directionalLight position={[2.4, 0.4, -1.8]} intensity={0.25} />
 
-          <ReliefBody
-            marks={marks}
-            activeContinent={activeContinent}
-            view={view}
-            earth={earth}
-          />
+          <ReliefBody marks={marks} activeContinent={activeContinent} earth={earth} />
 
           <Environment resolution={32} frames={1} environmentIntensity={0.35}>
             <Lightformer intensity={1.8} color="#fff1dc" position={[-2, 3, 3]} scale={[8, 8, 1]} />
           </Environment>
 
-          <WorldRig view={view} />
-          <FreeSpin advance={advance} active={active && !still} />
+          {/* Bola BISA DIPEGANG, dan putaran bebasnya kini milik kendali yang
+              sama — bukan `useFrame` terpisah yang menulis rotasi sendiri.
+
+              `autoRotate` mati pada keempat keadaan yang memang harus
+              mematikannya: kanvas keluar layar, tab disembunyikan, gerak
+              dikurangi, dan bola sudah pernah dipegang. Yang terakhir itu yang
+              membuat §4 lebih bersih daripada sebelumnya — dulu putarannya baru
+              berhenti kalau sebuah benua dipilih, sekarang ia berhenti pada
+              sentuhan pertama. */}
+          <OrbitControls
+            makeDefault
+            ref={setControls}
+            enablePan={false}
+            enableZoom={false}
+            enableDamping
+            dampingFactor={0.08}
+            rotateSpeed={0.45}
+            /* `onStart` menembak sekali per gerakan, bukan tiap frame — jadi
+               `setState` di sini bukan `setState` di dalam handler gulir yang
+               dilarang §4. Dipasang sebagai prop dan bukan lewat
+               `addEventListener` supaya tidak ada pendengar yang perlu dilepas
+               tangan saat kendalinya berganti. */
+            onStart={() => setHeld(true)}
+            autoRotate={active && !still && !held && activeContinent === null}
+            autoRotateSpeed={AUTO_ROTATE_SPEED}
+            /* Lintang dijepit sama seperti sebelumnya: tanpa ini seretan ke atas
+               melempar kamera ke kutub dan bolanya terbaca sebagai piringan. */
+            minPolarAngle={POLAR_CLAMP.min}
+            maxPolarAngle={POLAR_CLAMP.max}
+          />
           <ResumeOnActive active={active} />
         </Canvas>
       ) : null}
