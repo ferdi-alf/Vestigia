@@ -88,6 +88,28 @@
   --color-oceania: oklch(0.48 0.13 195);
 }
 
+/* Palet bumi untuk globe v2 — dan ia SENGAJA melebar dari palet situs.
+
+   Seluruh warna lain di berkas ini diturunkan dari cahaya panggung 3D: kertas
+   hangat, batu kering, emas berpatina. Enam token ini tidak. Pemilik project
+   meminta bola yang terbaca sebagai BUMI SUNGGUHAN — laut biru, daratan hijau
+   dan cokelat — dan itu bahasa visual yang berbeda dari halaman yang memuatnya.
+
+   Keputusan itu diambil sadar, dan yang bisa diselamatkan adalah mekanismenya:
+   warnanya tetap masuk lewat `@theme` seperti token lain, bukan hex mentah yang
+   bertebaran di komponen. Paletnya melebar; aturan §5 tidak dilanggar dua kali.
+
+   Chroma-nya ditahan di bawah bumi foto: bola ini tetap harus berdiri di atas
+   kertas hangat tanpa terbaca seperti tempelan dari situs lain. */
+@theme {
+  --color-globe-abyss: #24567a;
+  --color-globe-sea: #33729b;
+  --color-globe-shelf: #62a6b2;
+  --color-globe-land: #5f7d46;
+  --color-globe-arid: #b09257;
+  --color-globe-ice: #eef3f3;
+}
+
 @layer base {
   :root {
     color-scheme: light;
@@ -690,6 +712,13 @@
   --color-europe: oklch(0.48 0.13 220);
   --color-americas: oklch(0.48 0.13 145);
   --color-oceania: oklch(0.48 0.13 195);
+
+  --color-globe-abyss: #1b4059;
+  --color-globe-sea: #275878;
+  --color-globe-shelf: #4d8390;
+  --color-globe-land: #4c653a;
+  --color-globe-arid: #8d7546;
+  --color-globe-ice: #d5dedf;
 
   --shell: min(80rem, 82vw);
   --shell-wide: min(96rem, 94vw);

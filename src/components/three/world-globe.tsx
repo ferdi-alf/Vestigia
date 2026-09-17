@@ -7,7 +7,7 @@ import * as THREE from "three";
 import type { Continent } from "@/data/types";
 import { CONTINENT_INFO } from "@/data/continents";
 import { latLonToVector3 } from "@/lib/geo";
-import { createReliefMaps } from "@/lib/three/relief-texture";
+import { createReliefMaps, type ReliefColors } from "@/lib/three/relief-texture";
 import { readTokens } from "@/lib/read-tokens";
 import { ACCENT, oklchToRgb } from "@/lib/three/oklch";
 import { EASE, gsap } from "@/lib/motion/use-scroll-scene";
@@ -109,19 +109,20 @@ function ReliefBody({
   marks,
   activeContinent,
   view,
-  stone,
+  earth,
 }: {
   marks: WorldMark[];
   activeContinent: Continent | null;
   view: React.RefObject<WorldView>;
-  stone: string;
+  earth: ReliefColors;
 }) {
   const group = useRef<THREE.Group>(null);
 
-  const maps = useMemo(() => createReliefMaps(), []);
+  const maps = useMemo(() => createReliefMaps(earth), [earth]);
   useEffect(
     () => () => {
       maps?.height.dispose();
+      maps?.color.dispose();
     },
     [maps],
   );
@@ -152,11 +153,15 @@ function ReliefBody({
     <group ref={group}>
       <mesh>
         <sphereGeometry args={[RADIUS, ...SEGMENTS]} />
-        {/* NOL `map`. Warnanya satu batu dari token — bola ini tidak pernah
-            membawa warna yang bukan milik situs ini, dan ia ikut berganti
-            kalau paletnya bergeser. §5: batu kering, bukan kaca atau neon. */}
+        {/* `map` dari peta warna bumi, dan TANPA `color`.
+
+            `color` mengalikan `map`, jadi warna apa pun selain putih akan
+            menodai laut dan daratan sekaligus. Bawaan three.js sendiri sudah
+            putih, jadi cara paling jujur menyerahkan warna sepenuhnya kepada
+            peta adalah tidak menyebut `color` sama sekali — bukan menuliskan
+            putih sebagai hex mentah, yang dilarang §5. */}
         <meshStandardMaterial
-          color={stone}
+          map={maps?.color ?? undefined}
           displacementMap={maps?.height ?? undefined}
           displacementScale={RELIEF}
           /* Peta yang SAMA, dan itu yang membuat reliefnya terlihat — lihat
@@ -321,14 +326,24 @@ export function WorldGlobe({
     if (v.spin <= 0) return;
     v.rot -= seconds * SPIN_SPEED * v.spin;
   }, []);
-  const [stone, setStone] = useState<string | null>(null);
+  const [earth, setEarth] = useState<ReliefColors | null>(null);
 
-  /* Warna batu dibaca dari token yang berlaku pada elemen INI, bukan dari
-     `:root` — sama seperti globe pembuka, supaya ia mengambil palet konsep. */
+  /* Keenam warna bumi dibaca dari token yang berlaku pada elemen INI, bukan
+     dari `:root` — sama seperti globe pembuka, supaya ia mengambil palet
+     konsep yang membungkusnya, tema gelap termasuk. */
   useEffect(() => {
     const node = host.current;
     if (!node) return;
-    setStone(readTokens(node, { stone: "--color-raised" }).stone);
+    setEarth(
+      readTokens(node, {
+        abyss: "--color-globe-abyss",
+        sea: "--color-globe-sea",
+        shelf: "--color-globe-shelf",
+        land: "--color-globe-land",
+        arid: "--color-globe-arid",
+        ice: "--color-globe-ice",
+      }),
+    );
   }, []);
 
   /**
@@ -377,7 +392,7 @@ export function WorldGlobe({
 
   return (
     <div ref={host} className="absolute inset-0" data-world-canvas>
-      {stone ? (
+      {earth ? (
         <Canvas
           frameloop={active ? (still ? "demand" : "always") : "never"}
           dpr={[1, 1.75]}
@@ -394,7 +409,7 @@ export function WorldGlobe({
               Yang membuat batu terbaca sebagai batu adalah bayangan panjang
               dari sumber yang rendah — persis bahasa cahaya yang sudah dipakai
               seluruh situs ini: rendah, hangat, dari kiri. */}
-          <hemisphereLight args={["#fff3e0", "#b9a88a", 0.32]} />
+          <hemisphereLight args={["#fff3e0", "#b9a88a", 0.52]} />
           <directionalLight position={[-4.2, 0.9, 1.4]} intensity={3.1} />
           <directionalLight position={[2.4, 0.4, -1.8]} intensity={0.25} />
 
@@ -402,7 +417,7 @@ export function WorldGlobe({
             marks={marks}
             activeContinent={activeContinent}
             view={view}
-            stone={stone}
+            earth={earth}
           />
 
           <Environment resolution={32} frames={1} environmentIntensity={0.35}>
