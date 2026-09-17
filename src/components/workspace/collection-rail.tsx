@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { CONTINENT_INFO } from "@/data/continents";
@@ -13,6 +14,13 @@ export interface RailEntry {
   name: LocalizedText;
   country: LocalizedText;
   period: LocalizedText;
+  /**
+   * Gambar kecil yang dirender dari geometri modelnya sendiri, kalau ada.
+   *
+   * Opsional dengan sengaja: daftar ini tetap utuh tanpa satu gambar pun, dan
+   * barisnya kembali ke bentuk lamanya. Lihat `scripts/make-thumbs.mjs`.
+   */
+  thumb?: string;
 }
 
 /**
@@ -97,14 +105,39 @@ export function CollectionRail({
                   on ? "bg-raised" : "hover:bg-raised/60",
                 )}
               >
-                <span
-                  aria-hidden="true"
-                  className={cn(
-                    "mt-[0.45rem] h-1.5 w-1.5 shrink-0 rounded-full transition-transform",
-                    on && "scale-150",
-                  )}
-                  style={{ backgroundColor: `oklch(0.48 0.13 ${CONTINENT_INFO[entry.continent].hue})` }}
-                />
+                {/* Gambar lebih dulu, lalu nama.
+
+                    Lima belas baris teks yang seragam tidak memberi mata satu
+                    pun pegangan; siluet memberi. Titik benua tetap ada dan
+                    pindah ke pojok gambar — ia informasi yang berbeda (wilayah,
+                    bukan bentuk), dan membuangnya memutus warna yang
+                    menghubungkan daftar ini dengan penyaring di atasnya. */}
+                <span className="relative mt-0.5 flex-none">
+                  <span
+                    className={cn(
+                      "flex h-11 w-11 items-center justify-center overflow-hidden rounded-lg border transition-colors",
+                      on ? "border-line-strong bg-raised" : "border-line bg-raised/50",
+                    )}
+                  >
+                    {entry.thumb ? (
+                      <Image
+                        src={entry.thumb}
+                        alt=""
+                        width={44}
+                        height={44}
+                        className="h-full w-full object-contain"
+                      />
+                    ) : null}
+                  </span>
+                  <span
+                    aria-hidden="true"
+                    className={cn(
+                      "absolute -top-0.5 -left-0.5 h-1.5 w-1.5 rounded-full transition-transform",
+                      on && "scale-150",
+                    )}
+                    style={{ backgroundColor: `oklch(0.48 0.13 ${CONTINENT_INFO[entry.continent].hue})` }}
+                  />
+                </span>
                 <span className="min-w-0 flex-1">
                   <span
                     className={cn(

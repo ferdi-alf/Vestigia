@@ -12,6 +12,7 @@
     "prebuild": "node scripts/sync-heritage.mjs && node scripts/sync-media.mjs",
     "sync:media": "node scripts/sync-media.mjs",
     "make:proxies": "node scripts/make-proxies.mjs",
+    "make:thumbs": "node scripts/make-thumbs.mjs",
     "encode:video": "node scripts/encode-video.mjs"
   },
   "dependencies": {

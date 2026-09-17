@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { HERITAGE, allSlugs, getHeritage } from "@/data/registry";
+import { THUMB_MANIFEST } from "@/data/generated/thumb-manifest";
 import { getI18n, getLocale } from "@/lib/i18n/server";
 import { HeritageViewer } from "@/components/three/heritage-viewer";
 import { CollectionRail } from "@/components/workspace/collection-rail";
@@ -78,6 +79,9 @@ export default async function HeritagePage({ params }: Props) {
     name: h.name,
     country: h.country,
     period: h.period,
+    /* `undefined` kalau `make:thumbs` belum pernah dijalankan untuk situs ini,
+       dan barisnya kembali ke bentuk tanpa gambar. Nol asumsi asset. */
+    thumb: THUMB_MANIFEST[h.slug],
   }));
 
   /* Proyeksi sempit untuk Bandingkan: peramban tidak pernah menerima lima
