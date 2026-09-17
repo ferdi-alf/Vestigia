@@ -45,6 +45,32 @@ import { A_COPY } from "./copy";
  */
 const PACE = 1.35;
 
+/**
+ * Pita gulir tempat pembongkaran terjadi, pecahan tinggi layar DI ATAS titik
+ * picu.
+ *
+ * Ia ada karena pembongkaran berbasis waktu terbukti TIDAK PERNAH TERLIHAT, dan
+ * sebabnya geometri, bukan durasi.
+ *
+ * Panggung "Yang Hilang" lengket hanya SELAMA section-nya menaungi puncak layar.
+ * Begitu pengguna menggulir ke atas melewati titik picu, panggung itu langsung
+ * meluncur turun bersama halamannya — dan rangkaian yang butuh dua detik untuk
+ * membongkar diri menghabiskan sebagian besar waktunya di luar bingkai. Terukur
+ * dengan gulir roda sungguhan: satu sentakan roda memindahkan 100 piksel dalam
+ * sepersekian detik, jadi seluruh adegan pembongkaran selesai ketika panggungnya
+ * tinggal sepertiga layar.
+ *
+ * Diikat ke gulir, ia tidak bisa dilewati: maju satu piksel ke atas berarti satu
+ * langkah pembongkaran, dan berhenti berarti adegannya berhenti di situ juga.
+ * Menggulir balik ke bawah menelusurinya persis — §6 memang menuntut itu untuk
+ * apa pun yang terikat gulir.
+ *
+ * Perakitannya TIDAK ikut diikat gulir. Arah itu sudah benar dan sudah tiga sesi
+ * diperjuangkan: dipicu sekali lalu berjalan sendiri, supaya berhenti menggulir
+ * di titik picu tetap memperlihatkan seluruhnya.
+ */
+const UNWIND_BAND = 0.55;
+
 const ELBOWS: BeamLink[] = [
   { from: "a-obj-coord", to: "a-obj-frame", shape: "elbow", elbow: "vertical-first", toEdgeAt: 0.34, delay: 0 },
   { from: "a-obj-period", to: "a-obj-frame", shape: "elbow", elbow: "vertical-first", toEdgeAt: 0.3, delay: 0.18 },
@@ -187,9 +213,11 @@ export function Relic({ heritage }: { heritage: Heritage }) {
              mundur   teks -> garis -> kartu -> globe dipasang lagi
                       -> navbar naik -> wadah -> bidang membuka
 
-         `once` karena itu dilepas. `onEnter` menjalankannya maju, `onLeaveBack`
-         menjalankannya mundur; keduanya memanggil timeline yang SAMA, jadi
-         tidak pernah ada dua keadaan yang bisa berbeda pendapat.
+         `once` karena itu dilepas. Maju dipicu sekali lalu berjalan atas waktu;
+         mundur diikat ke gulir lewat pita di bawah — lihat `UNWIND_BAND` untuk
+         kenapa mundur TIDAK boleh berbasis waktu. Keduanya menggerakkan
+         playhead timeline yang SAMA, jadi tidak pernah ada dua keadaan yang
+         bisa berbeda pendapat.
 
          Di-*ease*, bukan linear. Aturan "scrub wajib linear" berlaku bagi yang
          terikat gulir supaya bisa ditelusuri balik persis; rangkaian ini tidak
@@ -272,12 +300,110 @@ export function Relic({ heritage }: { heritage: Heritage }) {
 
       handoff.timeScale(PACE);
 
-      ScrollTrigger.create({
+      /* ── SATU PEMICU, DUA MESIN ─────────────────────────────
+         Rentangnya membentang dari satu pita DI ATAS titik serah terima sampai
+         titik itu sendiri, jadi `end` adalah ambang yang selama ini dipakai
+         `start: "top top"`.
+
+             onLeave       melewati ambang ke BAWAH  -> rakit, berbasis waktu
+             onEnterBack   melewati ambang ke ATAS   -> bongkar, terikat gulir
+             onUpdate      di dalam pita             -> playhead = progres gulir
+             onLeaveBack   keluar pita ke atas       -> bongkar penuh, dan
+                                                        rangkaiannya kembali
+                                                        perawan sehingga turun
+                                                        berikutnya memutarnya
+                                                        lagi dari nol
+
+         **Satu pemicu, bukan dua, dan itu perbaikan terukur.** Versi pertama
+         memisahkannya: satu pemicu `top top` untuk kedua lintasan, satu pemicu
+         ter-scrub untuk pitanya. Keduanya menggerakkan playhead yang sama, dan
+         urutan panggilan di antara dua ScrollTrigger dalam satu pembaruan tidak
+         dijamin. Akibatnya bisa dilihat: membongkar lalu menggulir turun lagi
+         meninggalkan halaman KOSONG — tirai berhenti di 97% tertutup, komposisi
+         tidak pernah dibuka, dan tidak ada satu pun yang bergerak lagi.
+
+         `scrub` juga dicabut. Yang dibutuhkan cuma progres gulir mentah di
+         `onUpdate`; `scrub` menambahkan pelicin yang tidak pernah dibaca
+         siapa pun di sini dan justru membuat nilai yang terbaca sulit
+         diperhitungkan. §6: apa pun yang terikat gulir memakai pemetaan
+         langsung. */
+      let unwinding = false;
+
+      const unwind = ScrollTrigger.create({
         trigger: node,
-        start: "top top",
-        onEnter: () => handoff.play(),
-        onLeaveBack: () => handoff.reverse(),
+        start: () => `top-=${Math.round(window.innerHeight * UNWIND_BAND)} top`,
+        end: "top top",
+        onLeave: () => {
+          unwinding = false;
+          handoff.play();
+        },
+        /* `pause`, bukan `reverse`. Yang menggerakkan playhead ke belakang
+           adalah gulir; membiarkan timeline berjalan sendiri di saat yang sama
+           berarti dua mesin mendorong satu playhead. */
+        onEnterBack: () => {
+          unwinding = true;
+          handoff.pause();
+        },
+        onUpdate: (self) => {
+          if (unwinding) handoff.progress(self.progress);
+        },
+        /* Keluar pita ke ATAS: rangkaiannya kembali PERAWAN.
+
+           Di titik ini globe kelompok satu sudah dipasang lagi dan sudah
+           terlihat penuh, jadi tidak ada lagi yang menunggu dibongkar — tetapi
+           `unwinding` yang dibiarkan hidup punya akibat yang halus dan justru
+           itu yang dikeluhkan. Selama ia true, menggulir turun lagi akan
+           MENYERET playhead maju lewat `onUpdate`, sehingga komposisinya sudah
+           terakit penuh sebelum ambangnya sempat dilintasi. `play()` lalu
+           tidak punya apa pun untuk dimainkan, dan animasinya tidak pernah
+           muncul untuk kedua kalinya.
+
+           Dimatikan di sini, pita itu berhenti menyeret apa pun pada lintasan
+           berikutnya. Turun lagi berarti melewati ambang dengan playhead masih
+           di nol, dan yang terjadi persis seperti kunjungan pertama: tirai
+           menutup, lalu komposisinya dirakit.
+
+           Membalik arah DI DALAM pita tidak terpengaruh — `unwinding` masih
+           true di sana, jadi naik-turun sedikit tetap menelusurinya persis
+           seperti yang dituntut §6. Yang mengembalikan keadaan perawan hanya
+           benar-benar keluar dari pitanya. */
+        onLeaveBack: () => {
+          if (!unwinding) return;
+          handoff.progress(0);
+          unwinding = false;
+        },
       });
+
+      /**
+       * Mendarat LEWAT ambang tanpa pernah melintasinya.
+       *
+       * Lintasan adalah satu-satunya hal yang dilaporkan ScrollTrigger, dan itu
+       * perilaku yang benar — tetapi ada satu jalan masuk yang tidak melintasi
+       * apa pun: tautan jangkar dari halaman lain. Navigasi sisi klien menggulir
+       * ke elemennya SEBELUM adegan ini dipasang, jadi pemicunya lahir dalam
+       * keadaan sudah terlewat dan tidak punya apa pun untuk dilaporkan.
+       *
+       * Terukur dari halaman Tentang: gulir mendarat di 991 dengan ambang di
+       * 920 — tujuh puluh piksel DI BAWAHNYA — dan tirainya tetap di -936,
+       * komposisinya tetap 0. Layar yang didapat pengunjung kosong.
+       *
+       * Di sini rangkaiannya disetel langsung ke keadaan akhir, tanpa animasi:
+       * yang mengklik "Yang Hilang" meminta section itu, bukan meminta menunggu
+       * dua detik untuk melihatnya dirakit. Yang menggulir ke sana tetap
+       * mendapat perakitannya, karena ia memang melintasi ambangnya.
+       *
+       * Dicoba dua kali. Urutan antara gulir jangkar dan pemasangan adegan
+       * berbeda antara navigasi sisi klien dan muat halaman penuh, dan menebak
+       * salah satunya berarti memperbaiki setengah kasus. `delayedCall` dibuat
+       * di dalam scope `useGSAP`, jadi ia ikut dibersihkan saat teardown.
+       */
+      const settle = () => {
+        if (unwinding || handoff.progress() > 0) return;
+        if (unwind.scroll() <= unwind.end) return;
+        handoff.progress(1);
+      };
+      settle();
+      gsap.delayedCall(0.12, settle);
 
       /* ── Menggulir MEMPERCEPAT, bukan ditahan ────────────────────
          Pemilik project memilih ini ketimbang memaku panggung sampai rangkaian
@@ -363,7 +489,24 @@ export function Relic({ heritage }: { heritage: Heritage }) {
          ScrollTrigger dipasang, jadi kedua kelompok wajib kembali berdiri
          berurutan dalam aliran biasa — tumpang tindih tanpa animasi yang
          membukanya cuma akan menyembunyikan satu kelompok di balik yang lain. */
-      className="relative motion-safe:-mt-[105svh] motion-safe:h-[185svh] md:motion-safe:-mt-[130svh] md:motion-safe:h-[210svh] motion-reduce:pt-2 motion-reduce:pb-24 sm:motion-reduce:pt-3 sm:motion-reduce:pb-32"
+      /* `-scroll-mt` NEGATIF, dan itu memperbaiki cacat navigasi yang terukur.
+
+         Tautan "Yang Hilang" mendarat pada puncak section ini, dan puncak itu
+         PERSIS titik picu serah terima. `onEnter` ScrollTrigger menembak saat
+         ambangnya dilintasi, bukan saat didarati — jadi tautan itu menurunkan
+         pengunjung tepat di tempat globe hampir selesai membesar, dengan tirai
+         yang tidak pernah menutup dan komposisi yang tidak pernah dirakit.
+         Terukur: gulir 922, panel masih di -936, komposisi masih 0. Satu-satunya
+         jalan keluar adalah menggulir lagi sedikit, yang persis yang dikeluhkan.
+
+         Margin negatif menggeser titik pendaratannya 10svh ke BAWAH ambang,
+         sehingga ambangnya benar-benar dilintasi dan rangkaiannya berjalan.
+         Panggungnya lengket sepanjang 110svh pertama section, jadi mendarat
+         sedikit lebih dalam tidak menggeser satu piksel pun dari komposisinya.
+
+         `motion-safe:` — tanpa gerak tidak ada ambang untuk dilintasi, dan
+         menggeser pendaratan cuma akan memotong kicker dan judulnya. */
+      className="relative motion-safe:-scroll-mt-[10svh] motion-safe:-mt-[105svh] motion-safe:h-[185svh] md:motion-safe:-mt-[130svh] md:motion-safe:h-[210svh] motion-reduce:pt-2 motion-reduce:pb-24 sm:motion-reduce:pt-3 sm:motion-reduce:pb-32"
     >
       <div className="flex items-center overflow-hidden motion-safe:sticky motion-safe:top-0 motion-safe:h-svh">
       {/* Panel cahaya — milik KELOMPOK DUA, bukan kelompok satu.

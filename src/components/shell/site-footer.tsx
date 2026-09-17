@@ -119,7 +119,12 @@ export function SiteFooter({ sites = [] }: { sites?: FooterSite[] }) {
             memotong huruf adalah tepi wadah ini, dan margin negatiflah yang
             menaikkan garis pemisah di bawahnya sampai ke dalam badan huruf.
             Tanpa keduanya bersamaan, huruf berdiri utuh di atas garis dan
-            kesannya teks besar biasa, bukan sesuatu yang tenggelam. */}
+            kesannya teks besar biasa, bukan sesuatu yang tenggelam.
+
+            Potongannya 0,17em — sekitar seperempat tinggi huruf. Pada 0,09em
+            garisnya cuma menyerempet alas huruf, dan yang terbaca teks besar
+            yang kebetulan berhimpit dengan pemisah, bukan nama yang tenggelam
+            ke dalamnya. */}
         <div aria-hidden="true" className="mt-14 overflow-hidden sm:mt-16">
           <p
             /* Isinya kosong, tepinya digambar. `-webkit-text-fill-color`, bukan
@@ -129,8 +134,13 @@ export function SiteFooter({ sites = [] }: { sites?: FooterSite[] }) {
 
                Kalau peramban tidak mengenal keduanya, hurufnya jatuh ke teks
                pekat dalam warna yang sama: masih terbaca sebagai lockup, cuma
-               tidak berongga. Tidak ada yang hilang selain efeknya. */
-            className="-mb-[0.09em] flex justify-between font-display leading-[0.76] text-line-strong/40 [-webkit-text-fill-color:transparent] [-webkit-text-stroke:1px_currentColor] text-[clamp(2.75rem,13.6vw,12.5rem)]"
+               tidak berongga. Tidak ada yang hilang selain efeknya.
+
+               Goresannya 1,75px pada 70% `--color-line-strong`. Pada 1px dan
+               40% ia praktis hilang di layar terang — huruf setinggi dua ratus
+               piksel yang digariskan setipis itu terbaca sebagai bayangan,
+               bukan sebagai pahatan. */
+            className="-mb-[0.17em] flex justify-between font-display leading-[0.76] text-line-strong/70 [-webkit-text-fill-color:transparent] [-webkit-text-stroke:1.75px_currentColor] text-[clamp(2.75rem,13.6vw,12.5rem)]"
           >
             {WORDMARK.map((letter, index) => (
               <span key={index}>{letter}</span>
