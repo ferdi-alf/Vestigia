@@ -26,6 +26,10 @@ export type NavVariant = "a" | "b" | "c";
 const LINKS = [
   { href: "/#yang-hilang", key: "lost" },
   { href: "/#dunia", key: "explore" },
+  /* `nav.about` sudah ada di kedua kamus sejak lama dan tidak pernah dipakai —
+     ia menunggu halamannya. Href-nya route sungguhan, bukan jangkar, jadi ia
+     tetap benar dari halaman warisan maupun dari halaman ini sendiri. */
+  { href: "/about", key: "about" },
 ] as const;
 
 /**
