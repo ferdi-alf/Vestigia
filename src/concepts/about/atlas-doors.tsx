@@ -79,7 +79,17 @@ export function AtlasDoors({ points }: { points: MapPoint[] }) {
   });
 
   const links: BeamLink[] = hovered
-    ? [{ from: `about-card-${hovered}`, to: `about-mark-${hovered}`, curvature: -26 }]
+    ? [
+        {
+          from: `about-card-${hovered}`,
+          to: `about-mark-${hovered}`,
+          /* Diturunkan dari -26. Angka itu dipilih untuk lintasan TEGAK saat
+             kartu masih berada di bawah peta; pada lintasan MENDATAR dari kolom
+             kanan ke penanda di peta, busur sebesar itu melengkung jauh di atas
+             kedua ujungnya dan terbaca sebagai hiasan, bukan sebagai hubungan. */
+          curvature: -14,
+        },
+      ]
     : [];
 
   useScrollScene(
@@ -136,16 +146,31 @@ export function AtlasDoors({ points }: { points: MapPoint[] }) {
           </p>
         </div>
 
-        <div ref={scope} className="relative mt-12">
+        {/* Peta dan kartu BERDAMPINGAN dari `lg` ke atas.
+
+            Keduanya tetap di dalam satu `scope`, dan itu syarat: `BeamField`
+            mengukur posisi relatif terhadap container ini lalu men-cache-nya,
+            jadi memecahnya jadi dua wadah akan membuat garisnya menunjuk ke
+            tempat yang salah.
+
+            Di bawah `lg` kartunya kembali ke bawah peta dalam dua kolom. Kolom
+            selebar sepertiga tidak punya ruang untuk lima kartu di layar sempit,
+            dan beam memang sudah tidak digambar di sana. */}
+        <div ref={scope} className="relative mt-12 grid gap-4 lg:grid-cols-12 lg:gap-5">
           {/* Peta. Ia menyampaikan LETAK, bukan tautan — jadi ia diberi label
               sebagai satu gambar tunggal, dan navigasinya ada di kartu di
-              bawahnya. Lima target sekecil ini tidak akan pernah jadi target
+              sampingnya. Lima target sekecil ini tidak akan pernah jadi target
               sentuh atau target papan ketik yang layak. */}
           <div
             data-reveal
             role="img"
             aria-label={ABOUT_COPY.mapTitle[locale]}
-            className="overflow-hidden rounded-2xl border border-line bg-surface px-4 py-5 sm:px-6"
+            /* Dibiarkan MEREGANG setinggi kolom kartu di sebelahnya, dengan
+               petanya dipusatkan di dalamnya. Peta ini dipotong lebar dan
+               pendek (360x135 derajat), jadi pada lebar dua pertiga ia cuma
+               setinggi 328px sementara lima kartu menumpuk sampai 494 —
+               membiarkannya rata atas menyisakan lubang 166px di bawah peta. */
+            className="overflow-hidden rounded-2xl border border-line bg-surface px-4 py-5 sm:px-6 lg:col-span-8 lg:flex lg:flex-col lg:justify-center"
           >
             <svg viewBox={VIEWBOX} className="h-auto w-full overflow-visible">
               <path
@@ -185,8 +210,16 @@ export function AtlasDoors({ points }: { points: MapPoint[] }) {
           </div>
 
           {/* Kartu tujuan. Satu per benua, dengan jumlah situs dibaca dari
-              koleksi — jadi angkanya informasi, bukan hiasan. */}
-          <div data-doors className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              koleksi — jadi angkanya informasi, bukan hiasan.
+
+              Satu kolom tegak di `lg`, dua kolom di bawahnya. `content-start`
+              supaya kelimanya rapat di puncak alih-alih direnggangkan setinggi
+              peta — lima kartu yang dipaksa mengisi tinggi peta akan punya
+              bantalan dalam yang tidak pernah dipilih siapa pun. */}
+          <div
+            data-doors
+            className="grid gap-3 sm:grid-cols-2 lg:col-span-4 lg:grid-cols-1 lg:content-start lg:gap-2.5"
+          >
             {anchors.map(({ continent, count, slug }) => {
               const info = CONTINENT_INFO[continent];
               return (
@@ -221,30 +254,44 @@ export function AtlasDoors({ points }: { points: MapPoint[] }) {
                        dengan matahari di seluruh situs. Kelasnya sudah ada di
                        `globals.css` tetapi tidak pernah dipakai konsep A;
                        kartunya selama ini cuma border yang berganti warna. */
-                    "raking-card group relative isolate flex flex-col justify-between overflow-hidden rounded-2xl border bg-surface p-5 transition-colors",
+                    "raking-card group relative isolate overflow-hidden rounded-2xl border bg-surface transition-colors",
+                    /* Kartu tinggi di bawah `lg`, BARIS ramping dari `lg` ke
+                       atas. Bentuk lamanya disetel untuk lima kartu berjajar
+                       selebar halaman; lima di antaranya ditumpuk pada kolom
+                       sepertiga akan jauh melampaui tinggi petanya. */
+                    "flex flex-col justify-between p-5",
+                    "lg:flex-row lg:items-center lg:justify-between lg:gap-3 lg:px-4 lg:py-3.5",
                     hovered === continent ? "border-line-strong" : "border-line hover:border-line-strong",
                   )}
                 >
-                  {/* Aksen benua sebagai pita tipis di tepi atas — penanda
-                      wayfinding yang sama dengan yang dipakai peta, jadi benua
-                      yang sama selalu berwarna sama di seluruh situs ini. */}
+                  {/* Aksen benua — penanda wayfinding yang sama dengan yang
+                      dipakai peta, jadi benua yang sama selalu berwarna sama di
+                      seluruh situs ini.
+
+                      Pindah tepi mengikuti bentuk kartunya: pada kartu yang
+                      lebar ia garis judul di tepi atas, pada baris yang ramping
+                      ia penanda di tepi kiri. */}
                   <span
                     aria-hidden="true"
-                    className="absolute inset-x-0 top-0 h-0.5"
+                    className="absolute inset-x-0 top-0 h-0.5 lg:inset-x-auto lg:inset-y-0 lg:left-0 lg:h-auto lg:w-0.5"
                     style={{ backgroundColor: `oklch(0.48 0.13 ${info.hue})` }}
                   />
-                  <div>
-                    <h3 className="font-display text-2xl leading-none text-ink">
+                  <div className="min-w-0">
+                    <h3 className="font-display text-2xl leading-none text-ink lg:text-xl">
                       {info.name[locale]}
                     </h3>
-                    <p className="mt-3 text-xs leading-relaxed text-ink-muted">
+                    {/* Dua baris, bukan dipotong satu baris. Kolom selebar ini
+                        memuat sekitar empat puluh huruf, dan tagline benua
+                        semuanya lebih panjang — memotongnya di tengah kata
+                        terbaca sebagai kerusakan, bukan sebagai ringkasan. */}
+                    <p className="mt-3 text-xs leading-relaxed text-ink-muted lg:mt-1.5 lg:line-clamp-2">
                       {info.tagline[locale]}
                     </p>
                   </div>
                   {/* Angkanya jadi subjek, sejalan dengan chip metadata: yang
                       dibaca lebih dulu adalah BERAPA, bukan kata "situs". */}
-                  <p className="mt-6 flex items-baseline gap-1.5">
-                    <span className="font-display text-3xl leading-none tabular-nums text-ink">
+                  <p className="mt-6 flex items-baseline gap-1.5 lg:mt-0 lg:shrink-0 lg:flex-col lg:items-end lg:gap-0.5">
+                    <span className="font-display text-3xl leading-none tabular-nums text-ink lg:text-2xl">
                       {String(count).padStart(2, "0")}
                     </span>
                     <span className="text-[0.6rem] tracking-[0.16em] text-ink-dim uppercase">

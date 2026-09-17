@@ -98,8 +98,17 @@ const RELIC_SIZE = 0.1;
  * Ditenggelamkan sedikit, tepi alasnya masuk ke dalam lereng dan objectnya
  * terbaca tertanam. Angkanya jauh di bawah `LAND_RISE`, jadi ia tidak pernah
  * tenggelam sampai ke bawah permukaan laut.
+ *
+ * **Diturunkan dari 0,012 ke 0,004 setelah dilaporkan beberapa object tampak
+ * tenggelam.** Satu angka tetap untuk lima belas object yang tingginya berbeda
+ * berarti pecahan yang berbeda bagi tiap object: 0,012 cuma seperdelapan tinggi
+ * candi yang jangkung, tetapi hampir sepertiga tinggi object yang rendah dan
+ * melebar. Yang terakhir itulah yang terbaca setengah terkubur. Dan daratan
+ * sendiri tidak rata setinggi `LAND_RISE` di mana-mana — di dekat pantai
+ * reliefnya melandai turun, jadi object di sana mulai lebih rendah bahkan
+ * sebelum ditenggelamkan.
  */
-const RELIC_SINK = 0.012;
+const RELIC_SINK = 0.004;
 
 /** Sumbu tegak glTF. Dipakai menegakkan object pada normal permukaannya. */
 const MODEL_UP = new THREE.Vector3(0, 1, 0);

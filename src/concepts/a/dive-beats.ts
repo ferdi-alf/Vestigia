@@ -186,8 +186,21 @@ export const ENTER_FADE_FROM = 0.18;
  * sewarna persis — jadi yang terlihat bukan sambungan, melainkan judul yang
  * muncul di tengah cahaya.
  */
-export const LIGHT = { from: 0.42, to: 0.6 } as const;
-export const LIGHT_COMPACT = { from: 0.34, to: 0.5 } as const;
+export const LIGHT = { from: 0.42, to: 0.62 } as const;
+export const LIGHT_COMPACT = { from: 0.34, to: 0.53 } as const;
+
+/* ── Kenapa 0,62 dan bukan 0,60 ────────────────────────────────────────
+   Menutup 28px SEBELUM panggung lepas memang menjamin section berikutnya tidak
+   pernah mengintip — tetapi ia juga menjamin ada jarak. Diukur: bidang tertutup
+   pada gulir 1108, bagian pertama "Yang Hilang" baru masuk bingkai pada 1146.
+
+   Digeser ke 0,62 keduanya bertemu: bidang menutup persis saat guratan dan
+   kicker "Yang Hilang" melintasi tepi bawah layar. Yang dikorbankan sekitar 6px
+   di mana panggung sudah mulai meluncur sementara celah cahaya tinggal beberapa
+   piksel — dan yang mengintip di celah itu adalah puncak `Relic` yang isinya
+   bidang cahaya juga, sewarna persis. Tidak ada satu pun teks yang bocor.
+
+   Angka ponsel mengikuti aritmetika yang sama pada tinggi sectionnya sendiri. */
 
 /** 0 sebelum keadaan mulai, 1 setelah selesai. Linear di dalamnya. */
 export function stateProgress(progress: number, name: StateName): number {

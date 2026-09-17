@@ -159,7 +159,7 @@ export function Relic({ heritage }: { heritage: Heritage }) {
          membayar dua kali untuk kekosongan yang sama — dan kekosongan kedua itu
          persis yang dikeluhkan: setelah cahaya menutup, masih harus digulir
          sebelum ada yang terbaca. */
-      className="relative pt-6 pb-24 sm:pt-10 sm:pb-32"
+      className="relative pt-2 pb-24 sm:pt-3 sm:pb-32"
     >
       {/* Sambungan dari penyelaman.
 
@@ -194,13 +194,13 @@ export function Relic({ heritage }: { heritage: Heritage }) {
         {/* ══ Kiri — kenapa object ini ada di sini ══════════════════ */}
         <div className="lg:col-span-4">
           <span data-reveal aria-hidden="true" className="carved-edge" />
-          <p data-reveal className="kicker mt-4">
+          <p data-reveal className="kicker mt-3">
             {A_COPY.lossKicker[locale]}
           </p>
           <h2
             data-reveal
             id="a-relic-title"
-            className="mt-4 font-display text-4xl leading-[1.05] text-ink sm:text-5xl"
+            className="mt-3 font-display text-4xl leading-[1.05] text-ink sm:text-5xl"
           >
             {A_COPY.lossTitle[locale]}
           </h2>

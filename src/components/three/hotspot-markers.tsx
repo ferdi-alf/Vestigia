@@ -67,9 +67,20 @@ export function HotspotMarkers({
             key={hotspot.id}
             position={position}
             center
-            // Penanda di sisi jauh model tersembunyi di balik geometri,
-            // seperti yang diharapkan dari benda yang menempel padanya.
-            occlude="blending"
+            /* **TANPA `occlude`, dan itu koreksi atas perilaku yang tampak
+               benar tetapi tidak bisa dipakai.**
+
+               Sebelumnya `occlude="blending"` menyembunyikan penanda di balik
+               geometri — benar secara fisik untuk benda yang menempel di
+               permukaan batu, dan persis itu yang dilaporkan sebagai masalah:
+               penanda yang kebetulan berada di balik tonjolan model jadi tidak
+               pernah terlihat, dan satu-satunya cara menemukannya adalah
+               memutar object sampai kebetulan mendarat di sisi yang tepat.
+
+               Sebuah penanda adalah KONTROL, bukan ornamen. Kontrol yang harus
+               dicari dengan memutar-mutar benda bukan kontrol. Ia sekarang
+               selalu terlihat dan selalu bisa diklik; kedalamannya tetap
+               terbaca dari ukurannya yang mengecil bersama jarak kamera. */
             zIndexRange={[20, 0]}
           >
             <button
