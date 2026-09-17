@@ -115,22 +115,58 @@ export function World({ points }: { points: MapPoint[] }) {
                        sebuah benua adalah memilih benua lain, dan "lihat
                        semuanya lagi" jadi tidak mungkin. */
                     onClick={() => setActive(selected ? null : key)}
+                    /* Terbaca sebagai TOMBOL sebelum disentuh.
+
+                       Versi sebelumnya cuma teks dengan latar yang muncul saat
+                       hover — dan latar yang baru muncul saat hover tidak
+                       menolong siapa pun memutuskan untuk menyentuhnya. Di
+                       layar sentuh ia bahkan tidak pernah ada. Sekarang tiap
+                       baris membawa bingkai, permukaan, dan anak panah sejak
+                       bingkai pertama; hover dan `aria-pressed` mempertegasnya,
+                       bukan mengumumkannya.
+
+                       `cursor-pointer` ditulis eksplisit: Tailwind v4
+                       mengembalikan `cursor: default` pada `<button>` mengikuti
+                       perilaku bawaan peramban, jadi tanpa ini penunjuk tidak
+                       pernah berubah di atas sesuatu yang jelas-jelas bisa
+                       diklik. */
                     className={cn(
-                      "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors",
+                      "group flex w-full cursor-pointer items-center gap-3 rounded-xl border px-3.5 py-3 text-left transition-colors",
                       selected
-                        ? "bg-raised/70 text-ink"
-                        : "text-ink-muted hover:bg-raised/40 hover:text-ink",
+                        ? "border-line-strong bg-raised text-ink"
+                        : "border-line bg-surface/60 text-ink-muted hover:border-line-strong hover:bg-raised/70 hover:text-ink",
                     )}
                   >
                     <span
                       aria-hidden="true"
-                      className="h-2 w-2 shrink-0 rounded-full"
+                      className={cn(
+                        "h-2 w-2 shrink-0 rounded-full transition-transform",
+                        selected && "scale-125",
+                      )}
                       style={{ backgroundColor: `oklch(0.48 0.13 ${info.hue})` }}
                     />
                     <span className="font-display text-lg leading-none">{info.name[locale]}</span>
                     <span className="ml-auto text-[0.7rem] tracking-[0.14em] text-ink-dim tabular-nums uppercase">
                       {counts[key]} {A_COPY.worldSites[locale]}
                     </span>
+                    {/* Anak panah — penanda arah yang sama dengan yang dipakai
+                        tautan di seluruh situs. Ia bergeser sedikit saat hover,
+                        dan berputar jadi tanda silang saat benuanya sedang
+                        dipilih: satu bentuk yang mengatakan "buka" lalu
+                        "lepas", bukan dua ikon yang harus dipelajari. */}
+                    <svg
+                      aria-hidden="true"
+                      viewBox="0 0 16 16"
+                      className={cn(
+                        "h-3.5 w-3.5 shrink-0 transition-transform duration-300",
+                        selected ? "rotate-45 text-gold-dim" : "text-ink-dim group-hover:translate-x-0.5",
+                      )}
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                    >
+                      <path d="M3 8h10M9 4l4 4-4 4" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
                   </button>
                 </li>
               );

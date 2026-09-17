@@ -70,29 +70,50 @@ export interface ReliefMaps {
   height: Texture;
   /** Peta warna untuk slot `map`. Dilukis dari medan yang sama. */
   color: Texture;
+  /**
+   * Peta kekasaran — dan ini penambahan yang paling banyak menaikkan realisme
+   * per byte.
+   *
+   * Sebelumnya seluruh bola memakai satu `roughness` 0,94: laut dan daratan
+   * sama-sama kusam. Tidak ada satu pun bola bumi sungguhan yang begitu — yang
+   * membuat foto bumi langsung terbaca sebagai bumi adalah KILAU pada air,
+   * sementara daratan menyerap cahaya. Satu sorot matahari di laut melakukan
+   * lebih banyak daripada menaikkan resolusi tekstur dua kali.
+   *
+   * Dilukis dari `Path2D` daratan yang sama: laut mendekati cermin, daratan
+   * nyaris kusam penuh. Linear, bukan sRGB — ia data, bukan warna.
+   */
+  rough: Texture;
 }
 
 /**
- * 2:1, dan setengah resolusi globe pembuka.
+ * 2:1, dinaikkan dari 1024x512.
  *
- * Peta ketinggian tidak pernah dilihat sebagai gambar — ia dibaca sebagai angka
- * oleh bola bersegmen 256x128, dan resolusi di atas kerapatan verteksnya adalah
- * detail yang tidak punya tempat untuk mendarat. Peta warna memakai kanvas
- * seukuran supaya keduanya tetap satu sistem koordinat; ia toh cuma memuat pita
- * lebar dan tepi yang melandai, bukan garis tipis yang menuntut piksel.
+ * Alasan lama untuk setengah resolusi masih benar untuk peta KETINGGIAN: ia
+ * dibaca sebagai angka oleh verteks bola, dan detail di atas kerapatan verteks
+ * tidak punya tempat untuk mendarat. Tetapi peta WARNA dibaca per piksel layar,
+ * bukan per verteks — dan pada globe yang kini mengisi setengah bingkai, 1024
+ * piksel yang dibentangkan melingkari bola berarti satu texel melar jadi
+ * beberapa piksel. Garis pantainya jadi kabur bukan karena dilukis kabur,
+ * melainkan karena kehabisan resolusi.
+ *
+ * Keduanya dinaikkan bersama, bukan cuma yang warna: keduanya WAJIB berbagi satu
+ * sistem koordinat, dan dua kanvas beda ukuran berarti dua sistem.
  */
-const WIDTH = 1024;
-const HEIGHT = 512;
+const WIDTH = 2048;
+const HEIGHT = 1024;
 
 /**
  * Berapa banyak butir batu ditaburkan ke peta ketinggian.
  *
- * Diturunkan tajam dari 26.000. Sejak peta ini juga jadi `bumpMap`, tiap butir
- * ikut memutar normal — dan pada kerapatan lama butirannya MENELAN benua:
- * bolanya terbaca berpasir merata dan garis pantainya hilang di dalam derau.
- * Butiran harus terdengar seperti bisikan di bawah bentuk, bukan menggantikannya.
+ * Sempat diturunkan tajam ke 7.000 karena butirannya MENELAN benua — bolanya
+ * terbaca berpasir merata dan garis pantainya hilang di dalam derau. Dinaikkan
+ * lagi sekarang, dan itu bukan pembatalan keputusan lama melainkan konsekuensi
+ * dari kanvas yang empat kali lebih luas: kerapatan per piksel yang sama
+ * menuntut jumlah yang sebanding. Butiran tetap harus terdengar seperti bisikan
+ * di bawah bentuk, bukan menggantikannya.
  */
-const GRAIN = 7000;
+const GRAIN = 26000;
 
 /**
  * Sistem koordinat kedua kanvas, dan satu-satunya.
@@ -136,7 +157,7 @@ function surface(): { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D }
  */
 function finish(canvas: HTMLCanvasElement, srgb: boolean): Texture {
   const texture = new CanvasTexture(canvas);
-  texture.anisotropy = 4;
+  texture.anisotropy = 8;
   if (srgb) texture.colorSpace = SRGBColorSpace;
   return texture;
 }
@@ -252,6 +273,42 @@ function paintLand(land: Path2D, colors: ReliefColors): HTMLCanvasElement | null
   return layer.canvas;
 }
 
+/**
+ * Peta kekasaran: laut licin, daratan kusam.
+ *
+ * Hitam berarti cermin, putih berarti kusam penuh.
+ *
+ * Lautnya 0,36 dan BUKAN mendekati nol, dan angka itu dikoreksi setelah melihat
+ * layar. Percobaan pertama memakai 0,18 — hampir cermin — dan lautnya mendarat
+ * nyaris hitam. Sebabnya bukan kekasarannya melainkan apa yang dipantulkannya:
+ * permukaan yang halus MEMANTULKAN LINGKUNGAN, dan lingkungan panggung ini
+ * hampir seluruhnya kosong. Cermin yang menghadap ruang kosong memantulkan
+ * kekosongan.
+ *
+ * Diperbaiki dari dua sisi sekaligus: lautnya dibuat lebih kasar supaya
+ * pantulannya menyebar, dan lingkungannya diberi isi supaya ada yang dipantulkan.
+ */
+function paintRough(land: Path2D): HTMLCanvasElement | null {
+  const layer = surface();
+  if (!layer) return null;
+  const r = layer.ctx;
+
+  r.fillStyle = "#5c5c5c";
+  r.fillRect(0, 0, WIDTH, HEIGHT);
+
+  r.save();
+  r.scale(SCALE, SCALE);
+  /* Tepi yang sedikit di-blur menghindari garis kekasaran yang tajam persis di
+     garis pantai — kilau yang berhenti mendadak terbaca sebagai potongan. */
+  r.filter = "blur(0.5px)";
+  r.fillStyle = "#f0f0f0";
+  r.fill(land, "evenodd");
+  r.filter = "none";
+  r.restore();
+
+  return layer.canvas;
+}
+
 function paintColor(land: Path2D, colors: ReliefColors): HTMLCanvasElement | null {
   const surfaceCanvas = surface();
   const landLayer = paintLand(land, colors);
@@ -325,7 +382,10 @@ function paintColor(land: Path2D, colors: ReliefColors): HTMLCanvasElement | nul
  * ditawar. Kanvas di belakangnya tidak memegang apa pun, jadi ia boleh hidup
  * lebih lama dan dipakai lagi saat section dipasang ulang.
  */
-const PAINTED = new Map<string, { height: HTMLCanvasElement; color: HTMLCanvasElement }>();
+const PAINTED = new Map<
+  string,
+  { height: HTMLCanvasElement; color: HTMLCanvasElement; rough: HTMLCanvasElement }
+>();
 
 export function createReliefMaps(colors: ReliefColors): ReliefMaps | null {
   const key = [colors.abyss, colors.sea, colors.shelf, colors.land, colors.arid, colors.ice].join(
@@ -337,10 +397,15 @@ export function createReliefMaps(colors: ReliefColors): ReliefMaps | null {
     const land = new Path2D(WORLD_LAND_PATH);
     const height = paintHeight(land);
     const color = paintColor(land, colors);
-    if (!height || !color) return null;
-    canvases = { height, color };
+    const rough = paintRough(land);
+    if (!height || !color || !rough) return null;
+    canvases = { height, color, rough };
     PAINTED.set(key, canvases);
   }
 
-  return { height: finish(canvases.height, false), color: finish(canvases.color, true) };
+  return {
+    height: finish(canvases.height, false),
+    color: finish(canvases.color, true),
+    rough: finish(canvases.rough, false),
+  };
 }

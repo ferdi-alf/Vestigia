@@ -41,11 +41,14 @@ const RADIUS = 1;
  *
  * Jauh lebih rapat daripada bola biasa, dan itu syarat — bukan selera.
  * `displacementMap` menggeser VERTEKS; pada bola bersegmen jarang, daratan yang
- * timbul jadi segi banyak yang kasar dan garis pantainya patah-patah. 256x128
- * adalah titik tempat siluetnya berhenti terlihat bersudut pada ukuran layar
- * yang dipakai section ini.
+ * timbul jadi segi banyak yang kasar dan garis pantainya patah-patah.
+ *
+ * Dinaikkan dari 256x128 bersama resolusi petanya. Kerapatan verteks dan
+ * resolusi peta ketinggian adalah pasangan: menaikkan peta tanpa menaikkan
+ * verteks berarti detail baru yang tidak punya tempat untuk mendarat, dan
+ * sebaliknya berarti verteks yang menyampel texel yang sama berulang kali.
  */
-const SEGMENTS: [number, number] = [256, 128];
+const SEGMENTS: [number, number] = [384, 192];
 
 /**
  * Seberapa tinggi daratan menonjol, satuan radius.
@@ -179,6 +182,7 @@ function ReliefBody({
     () => () => {
       maps?.height.dispose();
       maps?.color.dispose();
+      maps?.rough.dispose();
     },
     [maps],
   );
@@ -239,6 +243,10 @@ function ReliefBody({
             putih sebagai hex mentah, yang dilarang §5. */}
         <meshStandardMaterial
           map={maps?.color ?? undefined}
+          /* Laut memantul, daratan menyerap. Satu sorot matahari di air
+             melakukan lebih banyak bagi realisme daripada menaikkan resolusi
+             tekstur dua kali — lihat catatan di `ReliefMaps.rough`. */
+          roughnessMap={maps?.rough ?? undefined}
           displacementMap={maps?.height ?? undefined}
           displacementScale={RELIEF}
           /* Peta yang SAMA, dan itu yang membuat reliefnya terlihat — lihat
@@ -253,8 +261,12 @@ function ReliefBody({
              sekali: bolanya kembali mulus dan seluruh benua lenyap. Dua
              properti bertetangga dengan satuan yang sama sekali berbeda. */
           bumpScale={1}
-          roughness={0.94}
+          /* Satu, bukan 0,94: `roughness` MENGALIKAN `roughnessMap`, jadi nilai
+             di bawah satu menggeser seluruh rentang peta dan kilau lautnya ikut
+             tergerus. Peta yang menentukan sekarang. */
+          roughness={1}
           metalness={0}
+          envMapIntensity={0.9}
         />
       </mesh>
 
@@ -369,7 +381,14 @@ function WorldRelic({ mark, dimmed }: { mark: PlacedMark & { proxy: string }; di
        sebelahnya — bola dan daftar jadi satu sistem wayfinding. `roughness`
        tinggi supaya ia menangkap cahaya menyapu yang sama dengan bolanya dan
        terbaca sebagai batu, bukan sebagai stiker yang ditempel. */
-    const material = new THREE.MeshStandardMaterial({ roughness: 0.78, metalness: 0 });
+    const material = new THREE.MeshStandardMaterial({
+      roughness: 0.62,
+      metalness: 0,
+      /* Ikut menangkap environment panggung, bukan cuma cahaya langsung. Tanpa
+         ini object di atas bola terbaca datar dibandingkan bolanya sendiri yang
+         sudah memantulkan langit. */
+      envMapIntensity: 0.85,
+    });
     object.traverse((child) => {
       const mesh = child as THREE.Mesh;
       if (mesh.isMesh) mesh.material = material;
@@ -448,7 +467,7 @@ function RakingKey() {
   const camera = useThree((state) => state.camera);
 
   const light = useMemo(() => {
-    const node = new THREE.DirectionalLight("#fff3e0", 2.6);
+    const node = new THREE.DirectionalLight("#fff3e0", 3.3);
     /* Kiri, sedikit di atas, dan DI DEPAN — dalam ruang kamera. Sumbu -Z
        menjauh dari kamera, jadi z positif kecil menaruhnya sedikit di belakang
        bidang kamera dan menghasilkan sapuan yang rendah alih-alih sorotan
@@ -648,7 +667,7 @@ export function WorldGlobe({
       {earth ? (
         <Canvas
           frameloop={active ? (still ? "demand" : "always") : "never"}
-          dpr={[1, 1.75]}
+          dpr={[1, 2]}
           camera={{ fov: 34, near: 0.05, far: 40, position: [0, 0, DISTANCE] }}
           gl={{ antialias: true, alpha: true }}
           style={{ background: "transparent" }}
@@ -672,8 +691,26 @@ export function WorldGlobe({
 
           <ReliefBody marks={marks} activeContinent={activeContinent} earth={earth} />
 
-          <Environment resolution={32} frames={1} environmentIntensity={0.42}>
-            <Lightformer intensity={1.8} color="#fff1dc" position={[-2, 3, 3]} scale={[8, 8, 1]} />
+          {/* Lingkungan diberi ISI, bukan cuma satu sumber.
+
+              Sejak laut punya peta kekasaran, permukaannya memantulkan
+              lingkungan alih-alih cuma menyerap cahaya langsung — dan dengan
+              satu lightformer saja yang dipantulkannya adalah kekosongan, jadi
+              lautnya mendarat hitam. Tiga bidang: langit hangat di atas kiri
+              (sumber yang sama dengan seluruh situs), langit dingin lemah di
+              kanan sebagai isian tepi, dan pantulan tanah kapur di bawah.
+              Resolusi dinaikkan karena pantulan pada permukaan yang lebih halus
+              memperlihatkan tepi bidangnya. */}
+          <Environment resolution={128} frames={1} environmentIntensity={0.85}>
+            <Lightformer intensity={2.4} color="#fff1dc" position={[-3, 3, 3]} scale={[10, 10, 1]} />
+            <Lightformer intensity={0.7} color="#9fb4cc" position={[4, 1, 2]} scale={[8, 8, 1]} />
+            <Lightformer
+              intensity={0.9}
+              color="#e8dfcb"
+              position={[0, -4, 0]}
+              scale={[12, 12, 1]}
+              rotation={[Math.PI / 2, 0, 0]}
+            />
           </Environment>
 
           {/* Bola BISA DIPEGANG, dan putaran bebasnya kini milik kendali yang

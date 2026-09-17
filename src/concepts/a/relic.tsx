@@ -130,7 +130,11 @@ export function Relic({ heritage }: { heritage: Heritage }) {
       gsap
         .timeline({
           defaults: { ease: EASE.enter },
-          scrollTrigger: { trigger: node, start: "top 72%", once: true },
+          /* `top 96%`, bukan `top 72%`: animasi masuk harus bermain saat
+             judulnya MELINTASI tepi bawah layar — di atas cahaya yang baru
+             menutup — bukan seperlima layar sesudah ia sebenarnya sudah
+             terlihat. */
+          scrollTrigger: { trigger: node, start: "top 96%", once: true },
         })
         .from("[data-reveal]", { autoAlpha: 0, y: 24, duration: 0.7, stagger: 0.09 }, 0)
         .from("[data-obj-frame]", { autoAlpha: 0, y: 26, scale: 0.97, duration: 0.85 }, 0.15)
@@ -147,7 +151,15 @@ export function Relic({ heritage }: { heritage: Heritage }) {
       ref={root}
       id="yang-hilang"
       aria-labelledby="a-relic-title"
-      className="relative py-24 sm:py-32"
+      /* Bantalan atas dipangkas habis-habisan, dan itu bukan penghematan ruang
+         melainkan syarat sambungan.
+
+         Bidang cahaya yang menutup di ujung penyelaman sudah menyediakan ruang
+         napas di atas section ini. Membayar bantalan penuh lagi di sini berarti
+         membayar dua kali untuk kekosongan yang sama — dan kekosongan kedua itu
+         persis yang dikeluhkan: setelah cahaya menutup, masih harus digulir
+         sebelum ada yang terbaca. */
+      className="relative pt-6 pb-24 sm:pt-10 sm:pb-32"
     >
       {/* Sambungan dari penyelaman.
 
@@ -163,10 +175,22 @@ export function Relic({ heritage }: { heritage: Heritage }) {
           pointer; seluruh isinya tetap ada tanpa lapisan ini. */}
       <div
         aria-hidden="true"
-        className="light-field pointer-events-none absolute inset-x-0 top-0 h-[42svh]"
+        className="light-field pointer-events-none absolute inset-x-0 top-0 h-[64svh]"
       />
 
-      <div className="shell relative grid items-center gap-12 lg:grid-cols-12 lg:gap-8">
+      {/* `lg:items-start`, bukan `items-center`.
+
+          Kolom kanan memuat penampil 3D yang tinggi, dan memusatkan kolom kiri
+          terhadapnya mendorong judul jauh ke tengah section — terukur 178px di
+          bawah puncaknya. Ditambah bantalan dan pemicu yang terlambat, jaraknya
+          jadi 463px: hampir satu layar penuh cahaya kosong antara bidang yang
+          menutup dan judul yang seharusnya berdiri di atasnya.
+
+          Merapatkannya ke puncak TIDAK mengubah susunan section — teks tetap di
+          kiri, object tetap di kanan. Yang bergeser cuma perataan vertikalnya.
+          Di bawah `lg` susunannya sudah bertumpuk, jadi ponsel tidak tersentuh
+          sama sekali. */}
+      <div className="shell relative grid items-center gap-12 lg:grid-cols-12 lg:items-start lg:gap-8">
         {/* ══ Kiri — kenapa object ini ada di sini ══════════════════ */}
         <div className="lg:col-span-4">
           <span data-reveal aria-hidden="true" className="carved-edge" />

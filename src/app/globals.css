@@ -102,9 +102,9 @@
    Chroma-nya ditahan di bawah bumi foto: bola ini tetap harus berdiri di atas
    kertas hangat tanpa terbaca seperti tempelan dari situs lain. */
 @theme {
-  --color-globe-abyss: #24567a;
-  --color-globe-sea: #33729b;
-  --color-globe-shelf: #62a6b2;
+  --color-globe-abyss: #2e6591;
+  --color-globe-sea: #3f83ae;
+  --color-globe-shelf: #6fb3bd;
   --color-globe-land: #5f7d46;
   --color-globe-arid: #b09257;
   --color-globe-ice: #eef3f3;
@@ -227,23 +227,36 @@
      Warnanya sedikit di atas `--color-paper`. Ia cahaya pertama yang menyapu
      penggalian, bukan lembar kertas — premis yang sama yang dipakai
      `.stage-backdrop`, digeser satu langkah lebih terang. */
+  /* **Alfa yang berubah, RGB yang TETAP — dan itu bukan gaya penulisan.**
+
+     Versi pertama memakai `color-mix(in oklab, #fdfbf6 55%, transparent)` untuk
+     ujung yang melandai, dan hasilnya terukur di layar: satu garis tegak samar
+     persis di tempat kedua panel bertemu. Sebabnya `transparent` adalah
+     `rgba(0,0,0,0)` — transparan HITAM — jadi mencampur ke arahnya menurunkan
+     alfa DAN menggelapkan warnanya sekaligus. Ujung yang melandai itu lalu
+     mendarat di atas bagian pekat panel seberangnya sebagai lapisan yang sedikit
+     lebih gelap.
+
+     Jebakan yang sama sudah menggigit sekali di project ini, pada gradien tudung
+     es globe v2, dan tercatat di `relief-texture.ts`. Menuliskan alfa secara
+     eksplisit pada warna yang SAMA menghilangkan seluruh persoalannya. */
   .light-wipe-l {
     background-image: linear-gradient(
       to right,
-      #fdfbf6 0%,
-      #fdfbf6 82%,
-      color-mix(in oklab, #fdfbf6 55%, transparent) 92%,
-      transparent 100%
+      rgb(253 251 246 / 1) 0%,
+      rgb(253 251 246 / 1) 82%,
+      rgb(253 251 246 / 0.55) 92%,
+      rgb(253 251 246 / 0) 100%
     );
   }
 
   .light-wipe-r {
     background-image: linear-gradient(
       to left,
-      #fdfbf6 0%,
-      #fdfbf6 82%,
-      color-mix(in oklab, #fdfbf6 55%, transparent) 92%,
-      transparent 100%
+      rgb(253 251 246 / 1) 0%,
+      rgb(253 251 246 / 1) 82%,
+      rgb(253 251 246 / 0.55) 92%,
+      rgb(253 251 246 / 0) 100%
     );
   }
 
@@ -251,7 +264,11 @@
      meluncur pergi menyerahkan permukaan yang sewarna persis — sambungannya
      jadi tidak terlihat, bukan sekadar mirip. */
   .light-field {
-    background-image: linear-gradient(to bottom, #fdfbf6 0%, transparent 100%);
+    background-image: linear-gradient(
+      to bottom,
+      rgb(253 251 246 / 1) 0%,
+      rgb(253 251 246 / 0) 100%
+    );
   }
 }
 

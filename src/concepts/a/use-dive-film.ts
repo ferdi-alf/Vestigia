@@ -2,7 +2,7 @@
 
 import type { RefObject } from "react";
 import type { DiveProgress } from "@/components/three/globe-stage";
-import { LIGHT_FROM, LIGHT_TO, SCRUB, STATE, STILL_PROGRESS } from "./dive-beats";
+import { LIGHT, LIGHT_COMPACT, SCRUB, STATE, STILL_PROGRESS } from "./dive-beats";
 import { EASE, gsap, useScrollScene } from "@/lib/motion/use-scroll-scene";
 
 /**
@@ -59,6 +59,11 @@ export function useDiveFilm(
   useScrollScene(
     ({ compact, still }, node) => {
       const q = <T extends Element>(sel: string) => gsap.utils.toArray<T>(sel, node);
+
+      /* Jendela cahaya mengikuti breakpoint karena panggung lengket lepas pada
+         progres yang berbeda di tiap tinggi section — lihat `LIGHT` di
+         `dive-beats`. */
+      const light = compact ? LIGHT_COMPACT : LIGHT;
 
       const hero = node.querySelector<HTMLElement>("[data-dive-hero]");
       const bridge = node.querySelector<HTMLElement>("[data-dive-bridge]");
@@ -259,8 +264,8 @@ export function useDiveFilm(
            Linear, mewarisi `EASE.scrub` dari timeline. Scrub yang di-ease
            tidak bisa ditelusuri balik dengan jujur: menggulir ke atas akan
            menempuh jalur yang berbeda dari saat turun. */
-        .to(lightL, { xPercent: 0, duration: LIGHT_TO - LIGHT_FROM }, LIGHT_FROM)
-        .to(lightR, { xPercent: 0, duration: LIGHT_TO - LIGHT_FROM }, LIGHT_FROM);
+        .to(lightL, { xPercent: 0, duration: light.to - light.from }, light.from)
+        .to(lightR, { xPercent: 0, duration: light.to - light.from }, light.from);
     },
     scope,
     [],

@@ -22,11 +22,11 @@
  * **EMPAT KEADAAN, DAN DUA YANG BUKAN KEADAAN.**
  *
  *   masuk      berbasis WAKTU, saat mount — teks naik, globe memudar masuk
- *   0,00–0,07  arrive   globe utuh di kanan, penanda menyala barat ke timur
- *   0,07–0,42  turn     globe berputar seiring scroll · teks hero mundur
- *   0,42–0,65  close    kamera jatuh ke permukaan · jembatan dibaca
- *   0,65–1,00  enter    menembus kerak · permukaan memenuhi bingkai lalu lewat
- *   0,66–0,80  cahaya   MEMOTONG `enter` — lihat LIGHT_FROM di bawah
+ *   0,00–0,06  arrive   globe utuh di kanan, penanda menyala barat ke timur
+ *   0,06–0,32  turn     globe berputar seiring scroll · teks hero mundur
+ *   0,32–0,50  close    kamera jatuh ke permukaan · jembatan dibaca
+ *   0,50–1,00  enter    menembus kerak, selesai pada 0,60 lalu ditahan
+ *   0,42–0,60  cahaya   MEMOTONG `enter` — lihat LIGHT_TO di bawah
  *
  * Animasi masuk sengaja TIDAK jadi keadaan. Ia satu-satunya gerak di section ini
  * yang tidak dipegang scroll, dan mencampurnya ke dalam progres akan membuat
@@ -67,13 +67,13 @@ export const SCRUB = 0.7;
  */
 export const STATE = {
   /** globe utuh di kanan, penanda menyala berurutan, teks terbaca */
-  arrive: { from: 0.0, to: 0.07 },
+  arrive: { from: 0.0, to: 0.06 },
   /** globe berputar seiring scroll, teks hero mundur ke atas */
-  turn: { from: 0.07, to: 0.42 },
+  turn: { from: 0.06, to: 0.32 },
   /** kamera jatuh ke permukaan · empat belas penanda padam, satu bertahan */
-  close: { from: 0.42, to: 0.65 },
+  close: { from: 0.32, to: 0.5 },
   /** menembus kerak — permukaan memenuhi bingkai lalu lewat */
-  enter: { from: 0.65, to: 1.0 },
+  enter: { from: 0.5, to: 1.0 },
 } as const;
 
 export type StateName = keyof typeof STATE;
@@ -100,6 +100,11 @@ export const ALTITUDE: readonly { at: number; value: number }[] = [
   { at: 0.0, value: 4.8 },
   { at: STATE.turn.to, value: 4.3 },
   { at: STATE.close.to, value: 1.02 },
+  /* Penembusan SELESAI pada 0,6, bukan pada 1,0 — dan angka itu berpasangan
+     dengan `LIGHT_TO`. Setelah cahaya menutup penuh tidak ada lagi yang bisa
+     dilihat di belakangnya, jadi meneruskan gerak kamera sampai ujung section
+     berarti menganimasikan sesuatu untuk nol penonton. Sisanya ditahan. */
+  { at: 0.6, value: 0.3 },
   { at: 1.0, value: 0.3 },
 ];
 
@@ -129,7 +134,7 @@ export const TOTAL_TURN = 165;
  * `enter` dipakai membesarkan permukaan sampai memenuhi bingkai, dan barulah ia
  * pergi.
  */
-export const ENTER_FADE_FROM = 0.55;
+export const ENTER_FADE_FROM = 0.18;
 
 /* ── Cahaya penutup ─────────────────────────────────────────────────────
    Dua bidang cahaya menutup dari kiri dan kanan sampai bertemu di tengah, dan
@@ -153,11 +158,36 @@ export const ENTER_FADE_FROM = 0.55;
    SEBELUM itu, kalau tidak judulnya muncul dari balik bidang yang masih
    setengah terbuka. */
 
-/** Progres saat tepi cahaya mulai masuk dari kedua sisi. */
-export const LIGHT_FROM = 0.66;
-
-/** Progres saat keduanya bertemu dan bidangnya penuh. */
-export const LIGHT_TO = 0.8;
+/**
+ * Jendela cahaya, dan kenapa ia BERBEDA di ponsel.
+ *
+ * **Batas atasnya struktural, bukan selera.** Panggung lengket setinggi 100svh
+ * di dalam section setinggi H lepas setelah `H - 100` digulir, yaitu pada
+ * progres `(H - 100) / H`. Sejak detik itu panggung meluncur ke atas dan section
+ * di bawahnya ikut terlihat dari tepi bawah layar.
+ *
+ *     desktop  260svh  →  lepas pada (260-100)/260 = 0,615
+ *     ponsel   210svh  →  lepas pada (210-100)/210 = 0,524
+ *
+ * Cahaya WAJIB tertutup penuh sebelum angka itu. Versi pertama menutup pada
+ * 0,80 — jauh sesudahnya — dan akibatnya persis yang dilaporkan pemilik project:
+ * "Yang Hilang" sudah mengintip dari bawah sementara cahayanya masih setengah
+ * menutup, sehingga urutan yang diminta jadi terbalik.
+ *
+ * Satu angka tidak bisa melayani keduanya. Memakai 0,60 membuat ponsel rusak;
+ * memakai 0,50 membuat desktop menyeret bidang polos jauh lebih lama daripada
+ * perlu. Jadi jendelanya mengikuti breakpoint — `useScrollScene` sudah
+ * menyediakan `compact`, jadi tidak ada media query kedua yang harus dijaga
+ * tetap sinkron.
+ *
+ * Yang dijaga sama di keduanya: saat panggung mulai meluncur, layarnya SUDAH
+ * jadi satu bidang cahaya penuh. Yang meluncur pergi bukan lagi pemandangan
+ * melainkan bidang polos, dan section berikutnya naik di belakang bidang yang
+ * sewarna persis — jadi yang terlihat bukan sambungan, melainkan judul yang
+ * muncul di tengah cahaya.
+ */
+export const LIGHT = { from: 0.42, to: 0.6 } as const;
+export const LIGHT_COMPACT = { from: 0.34, to: 0.5 } as const;
 
 /** 0 sebelum keadaan mulai, 1 setelah selesai. Linear di dalamnya. */
 export function stateProgress(progress: number, name: StateName): number {
