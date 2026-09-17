@@ -44,10 +44,16 @@ const DUST = slot("a-dust");
  *     z-[2]  debu        di DEPAN subjek; debu di belakang subjek cuma tekstur
  *     z-10   teks
  *
- * Tinggi section dan `sticky` adalah PASANGAN: ScrollTrigger di `use-dive-film`
- * berjalan dari `top top` ke `bottom bottom`, yang persis sama dengan lama
- * elemen lengket bertahan di layar. Mengubah salah satunya tanpa yang lain akan
- * mengembalikan ruang scroll mati yang sudah dihapus.
+ * Tinggi section dan `sticky` adalah PASANGAN, tetapi BUKAN pasangan satu-satu.
+ * ScrollTrigger di `use-dive-film` berjalan dari `top top` ke `bottom top` —
+ * sengaja lebih jauh daripada lama elemen lengket bertahan di layar.
+ *
+ * Bedanya justru itu perbaikannya. Dengan `bottom bottom`, progres 1 jatuh saat
+ * panggung lengket MULAI meluncur pergi, dan satu tinggi layar terakhir tidak
+ * dianimasikan apa pun — 949 piksel kertas mengosong sebelum section berikutnya
+ * berdiri, terukur pada viewport 730px. Dengan `bottom top`, layar terakhir itu
+ * berhenti jadi sisa dan jadi rentang animasi penutup: bumi ditembus PERSIS
+ * selagi panggungnya meluncur.
  */
 export function Dive({ heritage, marks }: { heritage: Heritage; marks: GlobeMark[] }) {
   const { locale, dict } = useI18n();
@@ -83,7 +89,7 @@ export function Dive({ heritage, marks }: { heritage: Heritage; marks: GlobeMark
     <section
       ref={root}
       aria-labelledby="a-hero-title"
-      className="relative motion-safe:h-[240svh] md:motion-safe:h-[300svh]"
+      className="relative motion-safe:h-[210svh] md:motion-safe:h-[260svh]"
     >
       <div
         ref={stage}

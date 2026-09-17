@@ -12,11 +12,13 @@ import { EASE, gsap, useScrollScene } from "@/lib/motion/use-scroll-scene";
  * panggung 3D memegang kamera dan globe. Keduanya bertemu hanya lewat satu kotak
  * berisi dua angka — `value` dari gulir, `intro` dari waktu.
  *
- * **CSS `sticky` memiliki posisi, GSAP hanya memiliki progres.**
- * `start: "top top"` sampai `end: "bottom bottom"` adalah rentang yang PERSIS
- * sama dengan lama elemen lengket bertahan di layar, jadi progres terpetakan
- * satu-ke-satu ke tinggi section dan ruang scroll yang tidak dianimasikan
- * menjadi mustahil secara konstruksi. Tidak ada `pin` di mana pun.
+ * **CSS `sticky` memiliki posisi, GSAP hanya memiliki progres.** Tidak ada `pin`
+ * di mana pun — dua sistem yang sama-sama memiliki posisi sudah pernah menyita
+ * satu sesi di project ini.
+ *
+ * Rentangnya `top top` sampai `bottom top`: progres 1 jatuh saat section
+ * benar-benar habis dari layar, bukan saat panggungnya mulai meluncur. Lihat
+ * catatan panjang di `end` di bawah untuk kenapa perbedaan itu menentukan.
  *
  * ---
  *
@@ -120,7 +122,20 @@ export function useDiveFilm(
         scrollTrigger: {
           trigger: node,
           start: "top top",
-          end: "bottom bottom",
+          /* `bottom top`, BUKAN `bottom bottom` — dan ini perbaikan struktural,
+             bukan penyetelan.
+
+             Dengan `bottom bottom`, progres 1 jatuh saat panggung lengket MULAI
+             meluncur keluar, menyisakan tepat satu tinggi layar yang tidak
+             dianimasikan apa pun. Diukur pada viewport 730px: 949 piksel — hampir
+             1,3 layar — antara globe mulai pergi dan judul section berikutnya
+             berdiri. Itulah "gulir cukup panjang" yang dilaporkan.
+
+             Dengan `bottom top`, progres 1 jatuh saat section benar-benar habis.
+             Layar terakhir itu berhenti jadi sisa dan jadi rentang animasi
+             terakhir: penembusan bumi terjadi PERSIS selagi panggungnya
+             meluncur. */
+          end: "bottom top",
           scrub: SCRUB,
           invalidateOnRefresh: true,
           onLeave: () => onPassed(true),
@@ -171,13 +186,13 @@ export function useDiveFilm(
         /* Navbar terangkat seirama, lalu turun lagi di ujung sekuens supaya
            section-section setelah ini tetap punya navigasi. */
         .to(navShell, { yPercent: -160, autoAlpha: 0, duration: span("turn") * 0.5 }, STATE.turn.from)
-        .to(navShell, { yPercent: 0, autoAlpha: 1, duration: span("hand") * 0.7 }, STATE.hand.from)
+        .to(navShell, { yPercent: 0, autoAlpha: 1, duration: span("enter") * 0.5 }, STATE.enter.from)
 
         /* Kalimat jembatan masuk saat globe mulai mendekat, DITAHAN diam selama
            `close`, lalu pergi saat globe mulai naik. Teks yang masih bergerak
            saat ia harus dibaca adalah teks yang tidak dibaca siapa pun. */
         .to(bridge, { autoAlpha: 1, duration: 0.04 }, STATE.close.from)
-        .to(bridge, { autoAlpha: 0, duration: 0.04 }, STATE.hand.from);
+        .to(bridge, { autoAlpha: 0, duration: 0.04 }, STATE.close.to - 0.05);
     },
     scope,
     [],

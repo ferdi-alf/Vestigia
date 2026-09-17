@@ -9,8 +9,7 @@ import { latLonInto, latLonToVector3 } from "@/lib/geo";
 import { createGlobeMaps, readTokens } from "@/lib/three/globe-texture";
 import { ACCENT, oklchToRgb } from "@/lib/three/oklch";
 import {
-  HAND_FADE_TO,
-  HAND_RISE,
+  ENTER_FADE_FROM,
   TOTAL_TURN,
   VIEWPOINT,
   altitudeAt,
@@ -124,23 +123,23 @@ function GlobeBody({
     const mat = material.current;
     if (!node || !mat) return;
 
-    const hand = stateProgress(t, "hand");
+    const enter = stateProgress(t, "enter");
 
     /* Masuk berbasis WAKTU, pergi berbasis GULIR — dua sumber, dikalikan.
 
-       `intro` memudarkannya masuk saat mount sambil mengecil dari sedikit lebih
-       besar; `hand` menurunkannya ke `HAND_FADE_TO` saat gulir mencapai ujung.
-       Keduanya tidak pernah bertabrakan karena `intro` sudah 1 jauh sebelum
-       gulir sampai ke `hand`. */
-    const alpha = intro * (1 - (1 - HAND_FADE_TO) * hand);
+       Kepergiannya sengaja DITUNDA sampai dua pertiga `enter` sudah lewat.
+       Memudarkannya selagi kamera mendekat akan terbaca sebagai benda yang
+       menghilang; menahannya sampai permukaannya memenuhi bingkai membuatnya
+       terbaca sebagai permukaan yang DILEWATI. */
+    const leave = Math.min(
+      1,
+      Math.max(0, (enter - ENTER_FADE_FROM) / (1 - ENTER_FADE_FROM)),
+    );
+    const alpha = intro * (1 - leave);
     mat.opacity = alpha;
     if (rim.current) rim.current.opacity = alpha * 0.22;
 
     node.scale.setScalar(1 + (1 - intro) * 0.08);
-
-    /* Naik keluar bingkai, dikuadratkan supaya ia berangkat pelan lalu lepas —
-       benda yang langsung melesat terbaca sebagai benda yang dilempar. */
-    node.position.y = hand * hand * HAND_RISE;
 
     /* Putaran BERBASIS PROGRES sepanjang seluruh gulir, bukan waktu. Menggulir
        ke atas menelusurinya balik persis — §6, dan permintaan harfiah pemilik
@@ -281,16 +280,20 @@ function Marker({
        jadi janji halamannya sudah berdiri sebelum jari menyentuh apa pun. */
     const start = offset * (1 - MARK_SPAN);
     const lit = Math.min(1, Math.max(0, (intro - start) / MARK_SPAN));
+    /* Padam sepanjang `close`, selagi kamera turun ke permukaan. Empat belas
+       pergi berurutan barat ke timur; yang dituju bertahan paling lama, lalu
+       ikut hilang saat kerak ditembus — pada jarak sedekat itu ia sudah tepat di
+       depan lensa dan tidak lagi menunjuk apa pun. */
     const dark = isTarget
-      ? 0
-      : Math.min(1, Math.max(0, (stateProgress(t, "hand") - start) / MARK_SPAN));
+      ? stateProgress(t, "enter")
+      : Math.min(1, Math.max(0, (stateProgress(t, "close") - start) / MARK_SPAN));
 
     mat.opacity = lit * (1 - dark) * Math.min(1, facing * 2.2);
 
     /* Yang bertahan membesar saat yang lain pergi. Tanpa itu, bingkai terakhir
        hanya berisi satu titik yang kebetulan tidak padam — bukan satu titik
        yang ditunjuk. */
-    node.scale.setScalar(isTarget ? 1 + stateProgress(t, "hand") * 1.1 : 1);
+    node.scale.setScalar(isTarget ? 1 + stateProgress(t, "close") * 1.1 : 1);
   });
 
   return (

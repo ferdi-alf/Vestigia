@@ -42,16 +42,25 @@
  */
 export const SCRUB = 0.7;
 
-/** Empat keadaan, batasnya tidak tumpang tindih. */
+/**
+ * Empat keadaan, batasnya tidak tumpang tindih — dan batas 0,67 itu BUKAN angka
+ * bulat yang dipilih karena enak dilihat.
+ *
+ * Section setinggi 260svh dengan panggung lengket 100svh berarti panggungnya
+ * lepas setelah 160svh digulir. Dengan `end: "bottom top"`, progres 1 jatuh saat
+ * section benar-benar habis pada 260svh — jadi panggung lepas tepat pada
+ * 160/260 = 0,615. Beat `enter` dimulai sedikit sesudahnya supaya penembusan
+ * dimulai saat panggungnya SUDAH mulai meluncur, bukan sedetik sebelumnya.
+ */
 export const STATE = {
   /** globe utuh di kanan, penanda menyala berurutan, teks terbaca */
-  arrive: { from: 0.0, to: 0.1 },
+  arrive: { from: 0.0, to: 0.07 },
   /** globe berputar seiring scroll, teks hero mundur ke atas */
-  turn: { from: 0.1, to: 0.55 },
-  /** globe mendekat — ini "zoom"-nya — sementara kalimat jembatan dibaca */
-  close: { from: 0.55, to: 0.85 },
-  /** globe naik keluar bingkai dan menyerahkan satu penanda ke section berikutnya */
-  hand: { from: 0.85, to: 1.0 },
+  turn: { from: 0.07, to: 0.42 },
+  /** kamera jatuh ke permukaan · empat belas penanda padam, satu bertahan */
+  close: { from: 0.42, to: 0.65 },
+  /** menembus kerak — permukaan memenuhi bingkai lalu lewat */
+  enter: { from: 0.65, to: 1.0 },
 } as const;
 
 export type StateName = keyof typeof STATE;
@@ -64,16 +73,21 @@ export type StateName = keyof typeof STATE;
  * dan tepi kirinya menabrak baris kedua judul. Pada 4,8 ia sekitar 54% — masih
  * jelas subjek, tetapi kolom teks di kiri punya ruangnya sendiri.
  *
- * Turun ke 2,4 sepanjang `close`. Itu yang dibaca sebagai zoom — dan ia
- * mendekat, bukan menjauh, karena benda yang membesar terbaca sebagai pengunjung
- * yang terus bergerak sementara benda yang mengecil terbaca sebagai benda yang
- * ditinggalkan.
+ * Turun ke 1,02 pada akhir `close` — tepat di atas permukaan — lalu menembusnya
+ * ke 0,3 sepanjang `enter`.
+ *
+ * **Di bawah 1,0 kamera berada DI DALAM bola.** Karena material bawaan hanya
+ * menggambar muka depan, bolanya lenyap persis saat dilewati; tidak ada trik
+ * material yang perlu ditulis untuk itu. Yang membuatnya terbaca sebagai
+ * MENEMBUS, bukan sebagai benda yang tiba-tiba hilang, adalah urutannya:
+ * permukaan membesar sampai memenuhi bingkai LEBIH DULU, dan keburamannya baru
+ * turun pada bagian akhir. Ia pergi setelah menutupi layar, bukan sebelum.
  */
 export const ALTITUDE: readonly { at: number; value: number }[] = [
   { at: 0.0, value: 4.8 },
   { at: STATE.turn.to, value: 4.3 },
-  { at: STATE.close.to, value: 2.4 },
-  { at: 1.0, value: 2.3 },
+  { at: STATE.close.to, value: 1.02 },
+  { at: 1.0, value: 0.3 },
 ];
 
 /**
@@ -94,22 +108,15 @@ export const VIEWPOINT = { lat: 16, lon: 52 } as const;
  */
 export const TOTAL_TURN = 165;
 
-/** Seberapa tinggi globe naik keluar bingkai selama `hand`, satuan radius. */
-export const HAND_RISE = 1.9;
-
 /**
- * Keburaman globe pada progres 1.
+ * Bagian `enter` yang dilewati sebelum keburaman mulai turun.
  *
- * BUKAN nol, dan itu perbaikan atas keluhan yang spesifik. Panggung lengket
- * selalu punya satu tinggi layar terakhir tempat ia meluncur keluar setelah
- * progres mencapai 1 — itu struktural, bukan bisa dihapus. Kalau globe sudah
- * memudar habis di tempat sebelum itu, yang meluncur keluar adalah kertas
- * kosong, dan itulah "gap layar putih kosong yang harus di-scroll cukup banyak".
- *
- * Dengan nilai ini kepergiannya yang sebenarnya adalah panggung yang meluncur
- * naik, bukan pudar di tempat. Ruang matinya berubah jadi serah-terima.
+ * Tanpa penundaan ini globe memudar SELAGI mendekat, dan yang terbaca benda yang
+ * menghilang — bukan permukaan yang dilewati. Dengan 0,55, dua pertiga pertama
+ * `enter` dipakai membesarkan permukaan sampai memenuhi bingkai, dan barulah ia
+ * pergi.
  */
-export const HAND_FADE_TO = 0.35;
+export const ENTER_FADE_FROM = 0.55;
 
 /** 0 sebelum keadaan mulai, 1 setelah selesai. Linear di dalamnya. */
 export function stateProgress(progress: number, name: StateName): number {
