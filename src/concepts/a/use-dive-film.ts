@@ -3,7 +3,8 @@
 import type { RefObject } from "react";
 import type { DiveProgress } from "@/components/three/globe-stage";
 import { SCRUB, STATE, STILL_PROGRESS } from "./dive-beats";
-import { EASE, gsap, useScrollScene } from "@/lib/motion/use-scroll-scene";
+import { EASE, ScrollTrigger, gsap, useScrollScene } from "@/lib/motion/use-scroll-scene";
+import { seedNav, setNavDiving } from "@/lib/motion/nav-shell";
 
 /**
  * Film pembuka.
@@ -66,19 +67,6 @@ export function useDiveFilm(
       const hint = node.querySelector<HTMLElement>("[data-dive-hint]");
       const dust = node.querySelector<HTMLElement>("[data-dive-dust]");
       const layers = q<HTMLElement>("[data-layer]");
-
-      /* Navbar tinggal DI LUAR section ini — ia saudara `Dive` di dalam
-         `ConceptFrame`, di pembungkus sticky-nya sendiri. Jadi ia tidak bisa
-         diambil lewat selektor ber-scope dan harus dicari dari dokumen.
-
-         Itu satu-satunya hal di berkas ini yang menjangkau ke luar scope, dan
-         alasannya konkret: gerak naiknya HARUS seirama dengan keluarnya teks
-         hero. Tween-nya tetap dibuat di dalam scope `useGSAP`, jadi ia tetap
-         dikembalikan saat teardown. */
-      const navShell =
-        typeof document === "undefined"
-          ? null
-          : document.querySelector<HTMLElement>("[data-nav-shell]");
 
       /* Gerak dikurangi: tidak satu pun ScrollTrigger dipasang — dicabut, bukan
          dipasang lalu dimatikan.
@@ -187,6 +175,32 @@ export function useDiveFilm(
         },
       });
 
+      /* ── Navbar: NIAT, bukan tween ───────────────────────────────────
+         Berkas ini tidak lagi menulis `transform` navbar sendiri. Ia cuma
+         menyatakan bahwa navbar seharusnya pergi ketika teks hero mulai mundur,
+         dan seharusnya kembali kalau pengguna menggulir balik ke atas titik itu.
+         Yang menerjemahkannya jadi gerak `lib/motion/nav-shell` — lihat catatan
+         panjang di sana untuk kenapa dua penulis pada satu properti sempat
+         meninggalkan navbar tersembunyi di hero.
+
+         `top+=6% top` bukan angka baru: `6%` adalah tinggi trigger, dan film
+         ini memetakan progres 0..1 ke `top top` sampai `bottom top`. Jadi
+         persentase itu PERSIS `STATE.turn.from`, diturunkan dari sumber yang
+         sama alih-alih ditulis ulang. */
+      const navGate = ScrollTrigger.create({
+        trigger: node,
+        start: `top+=${STATE.turn.from * 100}% top`,
+        onEnter: () => setNavDiving(true),
+        onLeaveBack: () => setNavDiving(false),
+      });
+
+      /* Disemai, karena `onEnter` hanya menembak saat ambangnya DILINTASI.
+         Membuka halaman ini pada posisi gulir yang sudah lewat ambang —
+         peramban memulihkan posisi gulir, dan kembali dari halaman warisan
+         melakukannya — tidak melintasi apa pun, jadi tanpa ini navbar berangkat
+         dari jawaban kunjungan sebelumnya. */
+      seedNav({ diving: window.scrollY >= navGate.start, opened: false });
+
       /* Satu-satunya jembatan ke kanvas: sebuah angka. */
       const proxy = { t: 0 };
       film.to(
@@ -222,10 +236,6 @@ export function useDiveFilm(
         .to(hero, { autoAlpha: 0, yPercent: -18, duration: span("turn") * 0.75 }, STATE.turn.from)
         .to(hint, { autoAlpha: 0, duration: 0.05 }, STATE.turn.from)
 
-        /* Navbar terangkat seirama, lalu turun lagi di ujung sekuens supaya
-           section-section setelah ini tetap punya navigasi. */
-        .to(navShell, { yPercent: -160, autoAlpha: 0, duration: span("turn") * 0.5 }, STATE.turn.from)
-        .to(navShell, { yPercent: 0, autoAlpha: 1, duration: span("enter") * 0.5 }, STATE.enter.from)
 
         /* Kalimat jembatan masuk saat globe mulai mendekat, DITAHAN diam selama
            `close`, lalu pergi saat globe mulai naik. Teks yang masih bergerak

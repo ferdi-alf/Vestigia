@@ -31,6 +31,13 @@ const id = {
     closeMenu: "Tutup menu",
   },
 
+  footer: {
+    preview: "Pratinjau",
+    collection: "Koleksi",
+    project: "Project",
+    rights: "Hanya yang benar-benar ada.",
+  },
+
   language: {
     switch: "Ganti bahasa",
     current: "Bahasa saat ini",
@@ -222,6 +229,13 @@ const en: Dictionary = {
     skipToContent: "Skip to content",
     menu: "Menu",
     closeMenu: "Close menu",
+  },
+
+  footer: {
+    preview: "Preview",
+    collection: "Collection",
+    project: "Project",
+    rights: "Only what is actually there.",
   },
 
   language: {

@@ -3,6 +3,7 @@ import { Cormorant_Garamond, Geist } from "next/font/google";
 import { I18nProvider } from "@/lib/i18n/client";
 import { getI18n } from "@/lib/i18n/server";
 import { SiteFooter } from "@/components/shell/site-footer";
+import { HERITAGE } from "@/data/registry";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 
@@ -136,7 +137,18 @@ export default async function RootLayout({
             <main id="main" className="flex-1">
               {children}
             </main>
-            <SiteFooter />
+            {/* Koleksi dibaca DI SINI, di server, lalu diteruskan sebagai
+                daftar kecil berisi slug dan nama saja. `SiteFooter` adalah
+                client component; mengimpor registry dari dalamnya berarti
+                seluruh metadata dwibahasa lima belas situs ikut masuk ke bundle
+                peramban demi empat tautan.
+
+                Empat pertama menurut urutan manifest — bukan pilihan, melainkan
+                potongan yang deterministik. Dengan nol GLB daftarnya kosong dan
+                kolomnya tidak dirender sama sekali. */}
+            <SiteFooter
+              sites={HERITAGE.slice(0, 4).map((h) => ({ slug: h.slug, name: h.name }))}
+            />
           </div>
         </I18nProvider>
       </body>

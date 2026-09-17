@@ -260,9 +260,19 @@
     );
   }
 
-  /* Bidang yang SAMA, diam. Dipakai puncak "Yang Hilang" supaya panggung yang
-     meluncur pergi menyerahkan permukaan yang sewarna persis — sambungannya
-     jadi tidak terlihat, bukan sekadar mirip. */
+  /* Bidang yang SAMA dengan kedua panel, diam, dan MELANDAI KE BAWAH.
+
+     Ia menambal satu sambungan yang bisa diukur. Bidang cahaya yang menutup di
+     "Yang Hilang" berwarna rgb(253 251 246); halaman di bawahnya berdiri di
+     atas `--color-paper`, rgb(250 247 240). Selisihnya cuma 3, 4, dan 6 dari
+     255 — dan itu sudah lebih dari cukup: dua bidang selebar layar yang
+     bertemu pada satu tepi tegas terbaca sebagai GARIS, berapa pun kecilnya
+     selisih itu. Terlihat jelas saat pitanya disembunyikan.
+
+     Dipasang di puncak section berikutnya, ia membuat sisi atas sambungan
+     sewarna persis dengan panel yang baru saja pergi, lalu melandai ke nol
+     sepanjang belasan rem sehingga kertas di bawahnya muncul tanpa tepi. Yang
+     dihapus garisnya, bukan perbedaan warnanya. */
   .light-field {
     background-image: linear-gradient(
       to bottom,

@@ -27,43 +27,51 @@ import { A_COPY } from "./copy";
  *
  * ---
  *
- * **KENAPA PENANDANYA TERLIHAT, dan bukan span kosong di koordinat persen.**
+ * **GARIS BERHENTI DI TEPI BINGKAI, dan tidak pernah masuk ke gambar.**
  *
- * Catatan project ini sudah mencatat percobaan yang gagal: ujung beam berupa
- * `<span>` kosong yang dipatok pada koordinat persen menghasilkan "garis lurus
- * tanpa makna". Sebabnya bukan tekniknya melainkan maknanya — garis yang
- * berakhir di titik yang tidak menandai apa pun memang tidak menandai apa pun.
+ * Versi pertama menaruh empat penanda bernomor DI DALAM tangkapan layar — di
+ * atas pemilih benua, daftar koleksi, dan kedua tombol panel — lalu menarik
+ * garis dari label ke masing-masing penanda. Nomornya diulang di label supaya
+ * pasangannya tetap terbaca.
  *
- * Di sini titik-titik itu menandai wilayah yang SUNGGUHAN ada di gambar:
- * pemilih benua, daftar koleksi, tombol pemandu, tombol kuis. Jadi penandanya
- * dibuat terlihat — lingkaran bernomor yang sama dengan penanda hotspot di
- * penampil 3D — dan garisnya berangkat dari sesuatu yang bisa dilihat menuju
- * sesuatu yang bisa dibaca. Nomornya diulang di labelnya, sehingga hubungan
- * keduanya tetap terbaca bahkan kalau garisnya tidak pernah digambar.
+ * Pemilik project memotongnya, dan alasannya berdiri sendiri begitu dilihat:
+ * gambar itu tangkapan layar sebuah ANTARMUKA. Menumpuk lingkaran emas
+ * bernomor di atasnya menambahkan chrome yang bukan bagian dari produk, tepat
+ * di tempat yang seluruh maksudnya memperlihatkan produk apa adanya — dan
+ * garis yang menembus masuk memperlakukan tangkapan layar itu sebagai kanvas
+ * gambar alih-alih sebagai jendela.
+ *
+ * Sekarang keempat garis berakhir pada TEPI bingkai peramban, di sisi yang
+ * menghadap labelnya, masing-masing pada ketinggian yang berbeda. Titik
+ * pendaratannya disetel lewat `toEdgeAt` supaya keempatnya tidak menumpuk jadi
+ * satu garis bercabang — mekanisme yang sama yang sudah dipakai tiga keterangan
+ * di section "Yang Hilang". Yang dikatakan garisnya berubah dari "lihat piksel
+ * ini" jadi "yang ini ada di dalam sana", dan kalimat kedua itu memang yang
+ * dibawa teks labelnya.
  */
 
 /**
- * Empat wilayah yang ditunjuk, dalam persen terhadap gambar.
+ * Empat siku, semuanya berakhir di tepi bingkai.
  *
- * Angkanya dibaca dari tangkapan layarnya sendiri pada 1499x711 — pemilih benua
- * di kiri atas, daftar koleksi tepat di bawahnya, dan kedua tombol panel di
- * kanan bawah. Kalau gambarnya diganti, keempat angka ini ikut disetel; itu
- * konsekuensi wajar dari memakai potret sungguhan alih-alih tiruan.
- */
-const MARKS = [
-  { id: "benua", at: { left: "9.5%", top: "14%" }, side: "left" as const },
-  { id: "koleksi", at: { left: "9.5%", top: "44%" }, side: "left" as const },
-  { id: "pemandu", at: { left: "81%", top: "70%" }, side: "right" as const },
-  { id: "kuis", at: { left: "92%", top: "70%" }, side: "right" as const },
-];
-
-/**
- * Siku 90 derajat, bukan busur — dan cahayanya menyapu sekali.
+ * `toEdgeAt` adalah di mana tiap garis mendarat pada sisi bingkai, 0 di
+ * puncaknya dan 1 di kakinya. Keempatnya dipisahkan supaya ruas mendatarnya
+ * tidak saling menimpa — dua di satu sisi yang mendarat di titik yang sama
+ * terbaca sebagai satu garis bercabang, bukan sebagai dua hubungan.
+ *
+ * **Angkanya sengaja MELESET dari ketinggian labelnya, dan itu syarat bentuk.**
+ * Percobaan pertama menyelaraskannya, dan hasilnya terukur: dua dari empat
+ * garis punya kaki tegak hanya 5,8 dan 5,4 piksel — di layar keduanya garis
+ * lurus biasa. Setelah digeser, keempat kakinya 53, 55, 60, dan 56 piksel, dan
+ * sikunya baru benar-benar terbaca sebagai siku.
+ *
+ * Sisi keberangkatan dan kedatangan tidak perlu disetel: `BeamField`
+ * menurunkannya dari posisi relatif kedua kotak, jadi label kiri mendarat di
+ * tepi kiri dan label kanan di tepi kanan tanpa satu pun cabang khusus.
  *
  * `variant="beam"` membawa cahaya yang bergerak di sepanjang garis; `"leader"`
  * yang dipakai section "Yang Hilang" tidak. Bedanya disengaja: di sana garisnya
- * survei yang kering, di sini ia menunjuk ke dalam sebuah gambar dan butuh
- * sesuatu yang menarik mata menyusurinya.
+ * survei yang kering, di sini ia menunjuk ke sebuah jendela dan butuh sesuatu
+ * yang menarik mata menyusurinya.
  *
  * Menyapu SEKALI, bukan berulang. Cahaya yang berdenyut selamanya adalah gerak
  * yang berjalan sendiri tanpa pemicu — dilarang §4 — dan pada empat garis
@@ -72,30 +80,32 @@ const MARKS = [
  * `delay` menaikkannya beruntun supaya keempatnya terbaca sebagai satu benda
  * yang sedang dirakit, bukan empat garis yang kebetulan muncul bersamaan.
  *
- * **`vertical-first`, dan labelnya sengaja DIGESER dari penandanya.** Sebuah
- * siku hanya terlihat bersiku kalau kedua ujungnya berbeda tinggi: percobaan
- * pertama menaruh label sejajar penandanya dan hasilnya terukur — dua dari
- * empat garis berbeda tinggi hanya 8 dan 5 piksel, jadi kakinya yang kedua
- * praktis nol dan yang tergambar garis lurus biasa. Tiap label kini ditempatkan
- * pada ketinggian yang jelas berbeda dari penandanya, dan kaki tegaknya
- * berangkat di kolom label — di LUAR gambar, bukan melintasinya. */
-const LINKS: BeamLink[] = MARKS.map((mark, index) => ({
-  from: `pv-label-${mark.id}`,
-  to: `pv-mark-${mark.id}`,
-  shape: "elbow",
-  elbow: "vertical-first",
+ * **Labelnya sengaja DIGESER tinggi-rendah.** Sebuah siku hanya terlihat
+ * bersiku kalau kedua ujungnya berbeda tinggi: percobaan pertama menaruh label
+ * sejajar tujuannya dan hasilnya terukur — dua dari empat garis berbeda tinggi
+ * hanya 8 dan 5 piksel, jadi kakinya yang kedua praktis nol dan yang tergambar
+ * garis lurus biasa.
+ */
+const LINKS: BeamLink[] = [
+  { from: "pv-label-benua", toEdgeAt: 0.2 },
+  { from: "pv-label-koleksi", toEdgeAt: 0.44 },
+  { from: "pv-label-pemandu", toEdgeAt: 0.42 },
+  { from: "pv-label-kuis", toEdgeAt: 0.64 },
+].map((link, index) => ({
+  ...link,
+  to: "pv-frame",
+  shape: "elbow" as const,
+  elbow: "vertical-first" as const,
   delay: index * 0.22,
 }));
 
 function Label({
   id,
-  index,
   title,
   body,
   className,
 }: {
   id: string;
-  index: number;
   title: string;
   body: string;
   className?: string;
@@ -106,15 +116,7 @@ function Label({
        satu dan sama. Pola yang sama dengan `MetadataChip`. */
     <div data-beam={`pv-label-${id}`} data-pv-label className={className}>
       <SpotlightCard className="rounded-xl px-4 py-3.5">
-        <p className="flex items-center gap-2">
-          <span
-            aria-hidden="true"
-            className="flex h-5 w-5 flex-none items-center justify-center rounded-full border border-gold bg-gold text-[0.6rem] font-medium text-on-gold"
-          >
-            {index + 1}
-          </span>
-          <span className="font-display text-base leading-tight text-ink">{title}</span>
-        </p>
+        <p className="font-display text-base leading-tight text-ink">{title}</p>
         <p className="mt-2 text-xs leading-relaxed text-ink-muted">{body}</p>
       </SpotlightCard>
     </div>
@@ -147,7 +149,6 @@ export function Preview() {
         })
         .from("[data-reveal]", { autoAlpha: 0, y: 22, duration: 0.6, stagger: 0.08 }, 0)
         .from("[data-pv-frame]", { autoAlpha: 0, y: 26, scale: 0.97, duration: 0.85 }, 0.15)
-        .from("[data-pv-mark]", { autoAlpha: 0, scale: 0.4, duration: 0.4, stagger: 0.1 }, 0.7)
         /* Label hanya `opacity`. Menggesernya dengan `y` berarti garisnya
            menunjuk ke tempat label itu berada sedetik yang lalu — `BeamField`
            mengukur sekali lalu men-cache. */
@@ -202,28 +203,24 @@ export function Preview() {
           <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:mt-0 lg:block">
             <Label
               id="benua"
-              index={0}
               title={A_COPY.previewBenuaLabel[locale]}
               body={A_COPY.previewBenuaBody[locale]}
               className="lg:absolute lg:top-[2%] lg:left-0 lg:w-[21%]"
             />
             <Label
               id="koleksi"
-              index={1}
               title={A_COPY.previewKoleksiLabel[locale]}
               body={A_COPY.previewKoleksiBody[locale]}
               className="lg:absolute lg:top-[58%] lg:left-0 lg:w-[21%]"
             />
             <Label
               id="pemandu"
-              index={2}
               title={A_COPY.previewPemanduLabel[locale]}
               body={A_COPY.previewPemanduBody[locale]}
               className="lg:absolute lg:top-[10%] lg:right-0 lg:w-[21%]"
             />
             <Label
               id="kuis"
-              index={3}
               title={A_COPY.previewKuisLabel[locale]}
               body={A_COPY.previewKuisBody[locale]}
               className="lg:absolute lg:top-[70%] lg:right-0 lg:w-[21%]"
@@ -233,6 +230,7 @@ export function Preview() {
           {/* ══ Bingkai peramban ═════════════════════════════════════ */}
           <div
             data-pv-frame
+            data-beam="pv-frame"
             className="overflow-hidden rounded-2xl border border-line bg-surface shadow-[0_1px_0_var(--color-line)] lg:w-[54%]"
           >
             {/* Bilah judul. Tiga titik dan sebuah path — TANPA nama domain,
@@ -251,7 +249,11 @@ export function Preview() {
 
             {/* Rasio dipotong dari 1499x711 supaya deret bingkai gambar kosong
                 di kaki halaman tidak ikut terbawa — yang diceritakan section ini
-                ruang kerjanya, bukan slot yang belum terisi. */}
+                ruang kerjanya, bukan slot yang belum terisi.
+
+                Tidak ada satu pun lapisan di atas gambar ini. Empat penanda
+                bernomor yang dulu duduk di sini sudah dilepas bersama nomornya
+                di label — lihat catatan di kepala berkas. */}
             <div className="relative aspect-[1499/586]">
               <Image
                 src="/images/preview/heritage.jpg"
@@ -260,19 +262,6 @@ export function Preview() {
                 sizes="(min-width: 1024px) 50vw, 100vw"
                 className="object-cover object-top"
               />
-
-              {MARKS.map((mark, index) => (
-                <span
-                  key={mark.id}
-                  data-beam={`pv-mark-${mark.id}`}
-                  data-pv-mark
-                  aria-hidden="true"
-                  style={mark.at}
-                  className="absolute z-[2] flex h-6 w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-gold bg-gold text-[0.65rem] font-medium text-on-gold shadow-sm"
-                >
-                  {index + 1}
-                </span>
-              ))}
             </div>
           </div>
 

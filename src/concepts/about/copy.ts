@@ -32,17 +32,6 @@ export const ABOUT_COPY = {
     en: "Vestigia is a reading room for world heritage in three dimensions. Every site here has a real 3D model and hand-written metadata — and anything lacking either is not shown at all.",
   },
 
-  thesisKicker: { id: "Tesisnya", en: "The thesis" },
-  thesisTitle: { id: "Menolak mengarang.", en: "Refusing to invent." },
-  thesisBody: {
-    id: "Sebuah aplikasi warisan budaya paling mudah dibuat mengesankan dengan cara mengarang: daftar situs yang panjang, deskripsi yang mengalir, jawaban yang selalu tersedia. Vestigia memilih kebalikannya. Koleksinya ditentukan oleh berkas yang benar-benar ada di disk, bukan oleh daftar yang ditulis tangan — menghapus satu model menghapus situsnya dari seluruh situs web tanpa satu baris kode pun berubah.",
-    en: "A heritage application is easiest to make impressive by inventing: a long list of sites, flowing descriptions, an answer always ready. Vestigia chose the opposite. Its collection is decided by the files actually on disk, not by a hand-written list — deleting one model removes that site from the entire website without a single line of code changing.",
-  },
-  thesisAi: {
-    id: "Pemandu AI-nya terikat pada aturan yang sama. Ia hanya menjawab dari data situs yang sedang dibuka, dan ketika sesuatu tidak ada di sana ia mengatakannya — bukan menambalnya dengan pengetahuan umum yang kedengarannya benar.",
-    en: "The AI guide is bound by the same rule. It answers only from the data of the site being viewed, and when something is not there it says so — rather than patching the gap with general knowledge that merely sounds right.",
-  },
-
   statSites: { id: "Situs", en: "Sites" },
   statContinents: { id: "Benua", en: "Continents" },
   statFormat: { id: "Format", en: "Format" },

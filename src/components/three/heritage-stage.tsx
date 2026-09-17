@@ -66,7 +66,26 @@ function LoadingVeil({ label }: { label: string }) {
  * tidak terkuras hanya karena satu tab terbuka di halaman ini.
  */
 /**
- * Object berputar masuk saat dibuka, sekali.
+ * Satu putaran penuh — bukan sepertiga.
+ *
+ * Yang lama berputar 111 derajat lalu berhenti, dan sudut sembarang seperti itu
+ * terbaca sebagai object yang BERAYUN lalu ditahan. Satu putaran utuh mendarat
+ * pada bearing-nya sendiri: sudut akhirnya sama dengan sudut awalnya, jadi yang
+ * terlihat sebuah benda yang diputar lalu melambat sampai diam, bukan sebuah
+ * benda yang diseret ke posisi.
+ */
+const TURN = Math.PI * 2;
+
+/** Skala awal. Object tumbuh dari tapaknya sendiri — grupnya beralas di y=0
+    setelah normalisasi, jadi menskalakan grup tidak pernah mengangkatnya. */
+const SETTLE_SCALE = 0.9;
+
+/** Ketinggian awal, pengali tinggi model. Kecil dengan sengaja: yang dicari
+    rasa mendarat, bukan benda yang jatuh. */
+const SETTLE_LIFT = 0.05;
+
+/**
+ * Object mendarat masuk saat dibuka, sekali.
  *
  * Digantung pada satu-satunya sambungan yang tepat: `resolved` berbalik
  * `null -> ResolvedModel` PERSIS SEKALI, ketika model selesai dimuat dan
@@ -74,15 +93,46 @@ function LoadingVeil({ label }: { label: string }) {
  * pernah terjadi lagi sampai panggungnya di-mount ulang — dan berpindah situs
  * memang me-mount ulang, karena tiap warisan adalah route-nya sendiri.
  *
+ * ---
+ *
+ * **TIGA PROPERTI, SATU DESELERASI.** Versi pertama cuma memutar, dan yang
+ * dikeluhkan pemilik project bukan putarannya melainkan KEMUNCULANNYA: tirai
+ * pemuatan hilang dan object berdiri utuh pada bingkai yang sama, seukuran
+ * penuh, lalu barulah ia berayun.
+ *
+ * Terukur di peramban sebelum diubah: p50 8,3 ms, p99 8,6 ms, nol bingkai di
+ * atas 33 ms sepanjang enam detik pertama. Jadi kekasarannya bukan frame yang
+ * jatuh — tidak ada satu pun yang jatuh — melainkan tidak adanya kedatangan.
+ *
+ * Yang ditambahkan dua hal yang ikut mengendap pada deselerasi yang sama:
+ * object tumbuh dari 0,9 ke ukurannya, dan turun sedikit ke alasnya. Ketiganya
+ * `power3.out`, jadi ketiganya melambat bersamaan dan yang terbaca satu gerak,
+ * bukan tiga.
+ *
+ * Skala dan ketinggian berhenti lebih dulu daripada putarannya. Object sudah
+ * berdiri pada ukuran dan tempatnya sementara putarannya masih mengendap —
+ * itu yang membuat ekornya terasa sebagai object yang melambat, bukan sebagai
+ * animasi yang masih berjalan.
+ *
  * **`invalidate()` di tiap update bukan kehati-hatian berlebihan.** Kanvas ini
  * `frameloop="demand"`: tidak ada satu pun bingkai yang tergambar sendiri. Tanpa
  * dorongan itu yang terlihat cuma bingkai pertama dan terakhir — objectnya
- * melompat ke pose akhir alih-alih berputar ke sana.
+ * melompat ke pose akhir alih-alih berputar ke sana. Ia dipasang pada
+ * TIMELINE-nya, bukan pada ketiga tween: satu dorongan per bingkai, bukan tiga.
  *
- * Gerak dikurangi: tidak ada tween sama sekali, dan rotasinya dibiarkan nol.
- * Object langsung berdiri pada pose akhirnya (§10).
+ * Gerak dikurangi: tidak ada tween sama sekali, dan ketiga properti dibiarkan
+ * pada nilai akhirnya. Object langsung berdiri pada pose akhirnya (§10).
  */
-function EntranceSpin({ ready, children }: { ready: boolean; children: React.ReactNode }) {
+function EntranceSpin({
+  ready,
+  /** tinggi model yang sudah dinormalkan; skala ketinggian awalnya */
+  height,
+  children,
+}: {
+  ready: boolean;
+  height: number;
+  children: React.ReactNode;
+}) {
   const invalidate = useThree((state) => state.invalidate);
   /* Grupnya DIMILIKI komponen ini, tidak diterima sebagai prop.
 
@@ -96,28 +146,33 @@ function EntranceSpin({ ready, children }: { ready: boolean; children: React.Rea
     const node = group.current;
     if (!node || !ready) return;
 
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    const rest = () => {
       node.rotation.y = 0;
+      node.position.y = 0;
+      node.scale.setScalar(1);
+    };
+
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      rest();
       invalidate();
       return;
     }
 
-    const tween = gsap.fromTo(
-      node.rotation,
-      { y: -Math.PI * 0.62 },
-      {
-        y: 0,
-        duration: 1.5,
-        ease: EASE.enter,
-        onUpdate: invalidate,
-      },
-    );
+    const tl = gsap.timeline({ defaults: { ease: EASE.enter }, onUpdate: invalidate });
+    tl.fromTo(node.rotation, { y: -TURN }, { y: 0, duration: 1.25 }, 0)
+      .fromTo(
+        node.scale,
+        { x: SETTLE_SCALE, y: SETTLE_SCALE, z: SETTLE_SCALE },
+        { x: 1, y: 1, z: 1, duration: 0.9 },
+        0,
+      )
+      .fromTo(node.position, { y: height * SETTLE_LIFT }, { y: 0, duration: 0.9 }, 0);
 
     return () => {
-      tween.kill();
-      node.rotation.y = 0;
+      tl.kill();
+      rest();
     };
-  }, [ready, invalidate]);
+  }, [ready, height, invalidate]);
 
   return <group ref={group}>{children}</group>;
 }
@@ -208,9 +263,32 @@ export function HeritageStage({
 
         <Suspense fallback={null}>
           {/* Model sudah dinormalkan ke titik asal oleh `normalizeModel`, jadi
-              memutar grup pembungkusnya memutarnya tepat pada sumbunya sendiri. */}
-          <EntranceSpin ready={resolved !== null}>
+              memutar grup pembungkusnya memutarnya tepat pada sumbunya sendiri.
+
+              **Penanda hotspot IKUT DI DALAM grup ini**, dan itu memperbaiki
+              cacat yang sudah ada sejak putaran masuk dipasang: `anchors`
+              berada di ruang koordinat model, sementara penandanya dirender di
+              luar grup yang sedang diputar. Selama animasi masuk berjalan,
+              kelima belas penanda berdiri diam di pose akhir sementara objectnya
+              berputar di bawahnya. Di dalam grup, keduanya memakai matriks dunia
+              yang sama dan tidak pernah bisa berbeda.
+
+              `<Html>` tanpa prop `transform` memproyeksikan titiknya lalu
+              menaruh DOM seukuran layar, jadi ia mengikuti putaran dan skalanya
+              tanpa ikut mengecil. */}
+          <EntranceSpin ready={resolved !== null} height={resolved?.height ?? 1}>
             <HeritageModel heritage={heritage} onReady={handleReady} />
+
+            {resolved ? (
+              <HotspotMarkers
+                heritage={heritage}
+                anchors={resolved.anchors}
+                locale={locale}
+                activeId={activeHotspot}
+                onSelect={setActiveHotspot}
+                visible={showHotspots}
+              />
+            ) : null}
           </EntranceSpin>
         </Suspense>
 
@@ -228,17 +306,6 @@ export function HeritageStage({
               adalah kertas terang. */}
           <Lightformer intensity={0.7} color="#cbbba0" position={[0, -4, 0]} scale={[12, 12, 1]} rotation={[Math.PI / 2, 0, 0]} />
         </Environment>
-
-        {resolved ? (
-          <HotspotMarkers
-            heritage={heritage}
-            anchors={resolved.anchors}
-            locale={locale}
-            activeId={activeHotspot}
-            onSelect={setActiveHotspot}
-            visible={showHotspots}
-          />
-        ) : null}
 
         <OrbitControls
           ref={(instance) => {

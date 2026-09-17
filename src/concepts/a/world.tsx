@@ -83,6 +83,32 @@ export function World({ points }: { points: MapPoint[] }) {
       aria-labelledby="a-world-title"
       className="relative py-24 sm:py-32"
     >
+      {/* Sambungan dengan "Yang Hilang" di atasnya.
+
+          Bidang cahaya yang menutup di sana berhenti tepat pada tepi bawah
+          section-nya, dan di bawah tepi itu halaman kembali ke kertas. Kedua
+          warnanya nyaris sama — selisih 3, 4, dan 6 dari 255 — tetapi dua
+          bidang selebar layar yang bertemu pada tepi tegas tetap terbaca
+          sebagai GARIS mendatar, dan garis itulah yang mengganggu.
+
+          Pita ini berangkat dari warna panel itu persis, lalu melandai ke nol.
+          Tepinya hilang; perbedaan warnanya tetap ada, dan memang tidak ada
+          yang salah dengannya.
+
+          `-z-10` menaruhnya di belakang seluruh isi section tetapi tetap di
+          depan latar `concept-ground` — `ConceptFrame` memasang `isolate`, jadi
+          z-index negatif berhenti di sana alih-alih tenggelam ke belakang
+          halaman.
+
+          `motion-reduce:hidden` karena pada mode itu panel cahayanya memang
+          tidak pernah dipasang: kedua section berdiri berurutan di atas kertas
+          yang sama, tidak ada sambungan untuk ditambal, dan pita yang tetap
+          dilukis cuma jadi noda terang tanpa sebab. */}
+      <div
+        aria-hidden="true"
+        className="light-field pointer-events-none absolute inset-x-0 top-0 -z-10 h-[18rem] motion-reduce:hidden"
+      />
+
       <div className="shell grid items-center gap-12 lg:grid-cols-12 lg:gap-10">
         {/* ══ Kiri — judul dan lima pintu ═══════════════════════════ */}
         <div className="lg:col-span-4">

@@ -41,26 +41,56 @@ type TabId = "guide" | "quiz" | "compare";
 export function AiPanel({
   sites,
   variant = "panel",
-  initialTab = "guide",
+  request,
   className,
 }: {
   sites: AiPanelSites;
   /** `panel` ceruk bertepi · `plain` tanpa wadah · `rail` tab tegak di kiri */
   variant?: "panel" | "plain" | "rail";
   /**
-   * Tab yang terbuka lebih dulu.
+   * Tab yang DIMINTA terbuka sekarang — sebuah permintaan, bukan nilai awal.
    *
-   * Dipakai pemanggil yang punya lebih dari satu pintu masuk ke panel ini —
-   * workspace 3D punya tombol terpisah untuk Pemandu dan Kuis, dan tombol
-   * Kuis yang membuka Pemandu adalah tombol yang berbohong.
+   * Dipakai pemanggil yang punya lebih dari satu pintu masuk ke panel ini:
+   * workspace 3D punya tombol terpisah untuk Pemandu, Kuis, dan Bandingkan,
+   * dan tombol Kuis yang membuka Pemandu adalah tombol yang berbohong.
+   *
+   * **Dulu ia bernama `initialTab`, dan namanya jujur tentang cacatnya.**
+   * `useState` hanya membaca argumennya pada mount pertama, sementara panel ini
+   * dipasang SEKALI dan tinggal terpasang — dialognya menyembunyikan diri, bukan
+   * melepasnya. Jadi permintaan kedua dan seterusnya tidak pernah sampai:
+   * menekan Kuis setelah pernah membuka Pemandu tetap membuka Pemandu.
+   *
+   * `null` berarti tidak ada yang sedang diminta — dialognya tertutup — dan
+   * panel menahan tab yang terakhir dipilih pengguna. Membedakan `null` dari
+   * sebuah tab itulah yang membuat permintaan yang SAMA dua kali berturut-turut
+   * tetap terbaca sebagai dua permintaan: di antaranya selalu ada `null`.
+   *
+   * `undefined` berarti tidak ada pemanggil yang mengendalikan; panel berdiri
+   * sendiri dan membuka Pemandu.
    */
-  initialTab?: TabId;
+  request?: TabId | null;
   className?: string;
 }) {
   const { dict } = useI18n();
   const uid = useId().replace(/[:]/g, "");
-  const [active, setActive] = useState<TabId>(initialTab);
+  const [active, setActive] = useState<TabId>(request ?? "guide");
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+
+  /* Menyesuaikan keadaan saat prop berubah, DI DALAM render — pola yang memang
+     dianjurkan React untuk kasus ini, dan bukan efek.
+
+     Dengan `useEffect`, tab yang salah sempat tergambar satu bingkai sebelum
+     dikoreksi. Di sini React membuang hasil render ini dan mengulangnya sebelum
+     satu piksel pun sampai ke layar, jadi yang terlihat cuma tab yang benar.
+
+     `seen` menyimpan permintaan yang sudah dilayani. Tanpanya, pengguna yang
+     berpindah tab di dalam dialog akan langsung ditarik balik oleh permintaan
+     lama yang nilainya tidak berubah. */
+  const [seen, setSeen] = useState<TabId | null | undefined>(request);
+  if (request !== seen) {
+    setSeen(request);
+    if (request) setActive(request);
+  }
 
   /* Bandingkan butuh dua situs. Dengan satu atau nol, tabnya tidak ditampilkan
      sama sekali — lebih jujur daripada memperlihatkan pemilih yang tidak bisa

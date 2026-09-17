@@ -74,29 +74,6 @@ export default async function AboutPage() {
           </div>
         </PageHeader>
 
-        {/* ══ Tesis ═══════════════════════════════════════════════════ */}
-        <section aria-labelledby="about-thesis-title" className="mt-20 grid gap-8 lg:grid-cols-12">
-          <div className="lg:col-span-4">
-            <span aria-hidden="true" className="carved-edge" />
-            <p className="kicker mt-4">{ABOUT_COPY.thesisKicker[locale]}</p>
-            <h2
-              id="about-thesis-title"
-              className="mt-4 font-display text-3xl leading-[1.06] text-ink sm:text-4xl"
-            >
-              {ABOUT_COPY.thesisTitle[locale]}
-            </h2>
-          </div>
-
-          <div className="lg:col-span-7 lg:col-start-6">
-            <p className="text-base leading-[1.8] text-ink-muted">
-              {ABOUT_COPY.thesisBody[locale]}
-            </p>
-            <p className="mt-6 text-base leading-[1.8] text-ink-muted">
-              {ABOUT_COPY.thesisAi[locale]}
-            </p>
-          </div>
-        </section>
-
         {/* ══ Cara kerjanya ═══════════════════════════════════════════ */}
         <section aria-labelledby="about-craft-title" className="mt-20 grid gap-8 lg:grid-cols-12">
           <div className="lg:col-span-4">

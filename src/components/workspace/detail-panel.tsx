@@ -140,7 +140,7 @@ export function DetailPanel({ heritage, all }: { heritage: Heritage; all: AiPane
         onClose={() => setTab(null)}
         title={heritage.name[locale]}
         sites={sites}
-        initialTab={tab ?? "guide"}
+        tab={tab}
       />
     </div>
   );

@@ -30,24 +30,42 @@ import { createContext, useCallback, useContext, useMemo, useState } from "react
  * menutupnya, dan timeline itu hidup di kelompok dua. Jadi kelompok dua yang
  * mengumumkan, kelompok satu yang mendengarkan.
  *
- * **Sengaja satu arah.** Tidak ada `unseal()`. Menggulir balik mengembalikan
- * globe lewat jalur yang sudah ada — `onLeaveBack` pada pemicu milik kelompok
- * satu sendiri — dan menambahkan jalur kedua untuk membatalkannya hanya akan
- * membuat dua sistem memperebutkan satu keadaan.
+ * **DUA ARAH, dan dulu tidak.**
+ *
+ * Versi pertama sengaja satu arah: tidak ada `unseal()`, dengan alasan bahwa
+ * menggulir balik sudah dikembalikan `onEnterBack` milik kelompok satu sendiri.
+ * Alasan itu salah, dan salahnya terbukti dipakai — `onEnterBack` hanya
+ * membatalkan `passed`, sementara `sealed` tetap true selamanya. Globe tidak
+ * pernah dipasang kembali, jadi menggulir ke atas mendarat di hero yang kosong:
+ * tanpa bola, tanpa penembusan, tanpa satu pun dari adegan yang baru saja
+ * dilewati.
+ *
+ * Sekarang keadaannya bisa dibatalkan, dan yang membatalkannya tetap SATU
+ * pihak: timeline serah terima di kelompok dua, dijalankan mundur. Ia yang
+ * menyegel saat playhead-nya melewati satu titik ke depan, dan ia juga yang
+ * membuka saat playhead yang sama melewatinya ke belakang. Tidak ada pihak
+ * kedua yang boleh memanggil keduanya.
  */
 interface Handoff {
   /** true setelah bidang cahaya menutup penuh. */
   sealed: boolean;
-  /** Dipanggil timeline perakitan kelompok dua, tepat setelah panelnya bertemu. */
-  seal: () => void;
+  /**
+   * Setel keadaan segel.
+   *
+   * Satu fungsi dengan argumen, bukan sepasang `seal()`/`unseal()`: yang
+   * memanggilnya adalah satu penanda di dalam satu timeline, dan penanda itu
+   * punya dua arah. Sepasang fungsi akan mengundang pemanggil kedua yang hanya
+   * tahu salah satu arahnya.
+   */
+  setSealed: (next: boolean) => void;
 }
 
-const HandoffContext = createContext<Handoff>({ sealed: false, seal: () => {} });
+const HandoffContext = createContext<Handoff>({ sealed: false, setSealed: () => {} });
 
 export function HandoffProvider({ children }: { children: React.ReactNode }) {
-  const [sealed, setSealed] = useState(false);
-  const seal = useCallback(() => setSealed(true), []);
-  const value = useMemo(() => ({ sealed, seal }), [sealed, seal]);
+  const [sealed, setSealedState] = useState(false);
+  const setSealed = useCallback((next: boolean) => setSealedState(next), []);
+  const value = useMemo(() => ({ sealed, setSealed }), [sealed, setSealed]);
 
   return <HandoffContext.Provider value={value}>{children}</HandoffContext.Provider>;
 }

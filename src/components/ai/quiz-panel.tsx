@@ -164,7 +164,11 @@ export function QuizPanel({ heritage }: { heritage: QuizSite }) {
       {phase === "done" ? (
         <div className="relative mt-4">
           {/* Konfeti hanya saat ada yang benar. Merayakan nol jawaban benar
-              terbaca sebagai ejekan, bukan sebagai perayaan. */}
+              terbaca sebagai ejekan, bukan sebagai perayaan.
+
+              Kanvasnya `fixed` seukuran jendela — lihat catatan di komponennya.
+              Ia tetap dirender dari sini supaya ikut naik ke top layer bersama
+              dialognya. */}
           {correct > 0 && festive.length > 0 ? <Confetti colors={festive} /> : null}
 
           <p className="font-display text-3xl text-gold">

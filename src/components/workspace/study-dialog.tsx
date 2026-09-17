@@ -47,7 +47,7 @@ export function StudyDialog({
   onClose,
   title,
   sites,
-  initialTab,
+  tab,
 }: {
   open: boolean;
   onClose: () => void;
@@ -56,7 +56,15 @@ export function StudyDialog({
       pemanggil panel itu ikut membayar. */
   title: string;
   sites: AiPanelSites;
-  initialTab?: "guide" | "quiz" | "compare";
+  /**
+   * Tab yang diminta terbuka, atau `null` ketika dialognya tertutup.
+   *
+   * Diteruskan apa adanya ke `AiPanel`, termasuk `null`-nya. `null` itu yang
+   * membuat permintaan yang sama dua kali berturut-turut — buka Kuis, tutup,
+   * buka Kuis lagi — tetap terbaca sebagai dua permintaan. Meratakannya jadi
+   * `tab ?? "guide"` di sini akan menghapus persis informasi itu.
+   */
+  tab?: "guide" | "quiz" | "compare" | null;
 }) {
   const { dict } = useI18n();
   const ref = useRef<HTMLDialogElement>(null);
@@ -106,7 +114,7 @@ export function StudyDialog({
       {/* Tingginya dibatasi supaya percakapan panjang bergulir DI DALAM dialog
           alih-alih mendorong dialognya melewati tepi layar. */}
       <div className="max-h-[70svh] overflow-y-auto p-5">
-        <AiPanel sites={sites} variant="plain" initialTab={initialTab} />
+        <AiPanel sites={sites} variant="plain" request={tab} />
       </div>
     </dialog>
   );
