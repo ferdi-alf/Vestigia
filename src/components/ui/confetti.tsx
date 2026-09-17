@@ -88,14 +88,28 @@ export function Confetti({ colors }: { colors: string[] }) {
        menyilang mengisi layar dan terbaca sebagai perayaan.
 
        `origin` dalam pecahan viewport, dan sejak kanvasnya `fixed` seukuran
-       jendela, x 0 dan x 1 benar-benar berarti sudut kiri dan kanan layar. */
-    const common = { particleCount: 48, spread: 62, startVelocity: 46, ticks: 190, colors };
+       jendela, x 0 dan x 1 benar-benar berarti sudut kiri dan kanan layar.
+
+       **Angkanya dinaikkan supaya ASALNYA terbaca, bukan supaya lebih ramai.**
+       Versi sebelumnya menyala dan partikelnya mendarat — terukur, buffernya
+       benar dan kertasnya jatuh di seluruh lebar jendela — tetapi dilaporkan
+       tidak datang dari kedua sudut bawah. Sebabnya bentuk semburannya:
+       `y: 0,9` berangkat sepuluh persen di atas kaki layar, lebar kipas 62
+       derajat menyebarkannya hampir mendatar, dan 48 partikel dengan kecepatan
+       46 sudah kehilangan bentuk kipas sebelum mata sempat menangkap dari mana
+       ia berangkat. Yang terlihat tinggal kertas yang jatuh entah dari mana.
+
+       Sekarang keduanya berangkat dari sudut yang PERSIS — `y: 1` — dengan
+       kipas yang lebih sempit, kecepatan yang lebih tinggi, dan sudut yang
+       lebih tegak, sehingga dua berkas naik menyilang dari kedua sudut sebelum
+       melengkung turun. Yang berubah keterbacaan asalnya. */
+    const common = { particleCount: 72, spread: 52, startVelocity: 62, ticks: 220, colors };
 
     /* Ditunda satu bingkai supaya tata letak benar-benar selesai sebelum
        partikel pertama dihitung. */
     const frame = requestAnimationFrame(() => {
-      void fire({ ...common, angle: 62, origin: { x: 0, y: 0.9 } });
-      void fire({ ...common, angle: 118, origin: { x: 1, y: 0.9 } });
+      void fire({ ...common, angle: 56, origin: { x: 0, y: 1 } });
+      void fire({ ...common, angle: 124, origin: { x: 1, y: 1 } });
     });
 
     return () => {

@@ -269,7 +269,14 @@ export function HeritageViewer({
       )}
 
       {mounted ? (
-      <div className="absolute right-3 top-3 flex flex-col gap-1.5">
+      <div
+        /* `z-30`, alasan yang sama dengan kartu keterangan hotspot: penanda
+           `<Html>` memakai z-index sampai 20, dan `stage-backdrop` di bawahnya
+           tidak membentuk stacking context sendiri — jadi tanpa ini sebuah
+           penanda yang mendarat di pojok kanan atas akan menimpa tombolnya.
+           Kontrol tidak boleh pernah kalah oleh isi panggung. */
+        className="absolute right-3 top-3 z-30 flex flex-col gap-1.5"
+      >
         <ToolButton label={dict.viewer.zoomIn} onClick={() => zoom(0.85)}>
           <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.5">
             <circle cx="9" cy="9" r="5.5" />
@@ -320,7 +327,19 @@ export function HeritageViewer({
       ) : null}
 
       {mounted ? (
-        <p className="pointer-events-none absolute bottom-3 left-3 max-w-[70%] text-[0.7rem] leading-relaxed text-ink-dim">
+        <p
+          /* Kiri ATAS, bukan kiri bawah.
+
+             Di kaki panggung ia berbagi sudut dengan kartu keterangan hotspot,
+             yang membentang `inset-x-3 bottom-3` — jadi begitu sebuah penanda
+             dibuka, petunjuk ini tertimbun di bawahnya. Petunjuk cara memakai
+             adalah hal yang dibaca SEBELUM menyentuh apa pun; menaruhnya di
+             tempat yang tertutup oleh hasil sentuhan pertama membuatnya hilang
+             tepat pada saat ia masih dibutuhkan.
+
+             Sudut kiri atas kosong: perkakas duduk di kanan atas. */
+          className="pointer-events-none absolute top-3 left-3 max-w-[60%] text-[0.7rem] leading-relaxed text-ink-dim"
+        >
           {dict.viewer.controls.orbit} · {dict.viewer.controls.zoom}
         </p>
       ) : null}

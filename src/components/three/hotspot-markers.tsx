@@ -150,7 +150,20 @@ export function HotspotDetail({
   return (
     <div
       id={DETAIL_ID}
-      className="fade-in pointer-events-auto absolute inset-x-3 bottom-3 z-10 max-w-md rounded-xl border border-line bg-surface/95 p-4 shadow-lg backdrop-blur-sm sm:inset-x-4 sm:bottom-4"
+      /* `z-30`, DI ATAS `zIndexRange` penanda.
+
+         Penanda dirender `<Html>` drei, yang memetakan kedalaman 3D-nya ke
+         rentang z-index yang diberikan — di sini [20, 0], sehingga penanda yang
+         lebih dekat menutupi yang lebih jauh. Kartu ini dulu `z-10`, yaitu DI
+         DALAM rentang itu, jadi penanda mana pun yang kebetulan berada di depan
+         separuh model akan menembusnya: angka bulat emas mengambang di atas
+         teks keterangan yang seharusnya menutupinya.
+
+         Kartu ini bukan bagian dari ruang 3D. Ia lapisan baca di atas panggung,
+         dan lapisan baca tidak boleh pernah kalah oleh sesuatu di dalam
+         panggung. 30 dipilih karena ia di luar rentang penanda seluruhnya,
+         bukan sekadar lebih tinggi dari puncaknya. */
+      className="fade-in pointer-events-auto absolute inset-x-3 bottom-3 z-30 max-w-md rounded-xl border border-line bg-surface/95 p-4 shadow-lg backdrop-blur-sm sm:inset-x-4 sm:bottom-4"
     >
       <div className="flex items-start gap-3">
         <span

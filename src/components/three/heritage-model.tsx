@@ -25,6 +25,19 @@ export interface ResolvedModel {
   height: number;
   /** posisi dunia tiap hotspot, sudah menempel di permukaan */
   anchors: Map<string, THREE.Vector3>;
+  /**
+   * Mesh model, sudah ber-BVH.
+   *
+   * Dilaporkan ke atas karena ada satu hal yang hanya bisa dijawab geometri
+   * sesungguhnya: apakah garis pandang dari sebuah hotspot ke kamera terhalang
+   * batu. Bounding box tidak bisa menjawabnya — lubang stupa, kolonade, dan
+   * halaman dalam semuanya kotak yang sama di mata bounding box.
+   *
+   * Pohon BVH-nya dibongkar saat komponen ini di-unmount, jadi daftar ini
+   * hanya sah selama modelnya terpasang. Pemakainya hidup di dalam kanvas yang
+   * sama, jadi keduanya selalu dilepas bersamaan.
+   */
+  meshes: THREE.Mesh[];
 }
 
 /**
@@ -65,7 +78,7 @@ export function HeritageModel({
     const box = new THREE.Box3().setFromObject(model);
     const anchors = snapHotspots(heritage.hotspots, meshes, box);
 
-    onReady({ radius: bounds.radius, height: bounds.size.y, anchors });
+    onReady({ radius: bounds.radius, height: bounds.size.y, anchors, meshes });
     invalidate();
 
     return () => {

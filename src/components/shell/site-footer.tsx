@@ -121,10 +121,10 @@ export function SiteFooter({ sites = [] }: { sites?: FooterSite[] }) {
             Tanpa keduanya bersamaan, huruf berdiri utuh di atas garis dan
             kesannya teks besar biasa, bukan sesuatu yang tenggelam.
 
-            Potongannya 0,17em — sekitar seperempat tinggi huruf. Pada 0,09em
-            garisnya cuma menyerempet alas huruf, dan yang terbaca teks besar
-            yang kebetulan berhimpit dengan pemisah, bukan nama yang tenggelam
-            ke dalamnya. */}
+            Potongannya 0,22em — sekitar sepertiga tinggi huruf. Naik dua kali:
+            pada 0,09em garisnya cuma menyerempet alasnya, dan pada 0,17em
+            hurufnya masih terbaca berdiri di atas garis alih-alih tenggelam ke
+            dalamnya. */}
         <div aria-hidden="true" className="mt-14 overflow-hidden sm:mt-16">
           <p
             /* Isinya kosong, tepinya digambar. `-webkit-text-fill-color`, bukan
@@ -140,7 +140,7 @@ export function SiteFooter({ sites = [] }: { sites?: FooterSite[] }) {
                40% ia praktis hilang di layar terang — huruf setinggi dua ratus
                piksel yang digariskan setipis itu terbaca sebagai bayangan,
                bukan sebagai pahatan. */
-            className="-mb-[0.17em] flex justify-between font-display leading-[0.76] text-line-strong/70 [-webkit-text-fill-color:transparent] [-webkit-text-stroke:1.75px_currentColor] text-[clamp(2.75rem,13.6vw,12.5rem)]"
+            className="-mb-[0.22em] flex justify-between font-display leading-[0.76] text-line-strong/70 [-webkit-text-fill-color:transparent] [-webkit-text-stroke:1.75px_currentColor] text-[clamp(2.75rem,13.6vw,12.5rem)]"
           >
             {WORDMARK.map((letter, index) => (
               <span key={index}>{letter}</span>
