@@ -109,7 +109,19 @@ export default async function HeritagePage({ params }: Props) {
           {/* ── Penampil ────────────────────────────────────────────── */}
           <main className="min-w-0 flex-1">
             <div className="h-[72svh] overflow-hidden rounded-2xl border border-line">
-              <HeritageViewer heritage={heritage} idleLabel={dict.landing.stageIdle} />
+              {/* `fill` supaya tinggi wadah ini benar-benar sampai ke kanvas.
+                  Tanpanya tingginya datang dari aspect-ratio di dalam penampil,
+                  dan latar panggung berhenti sebelum tepi bingkai ini.
+
+                  `initialAutoRotate` karena di halaman ini object sedang
+                  DIPERKENALKAN, bukan sedang diperiksa baris per baris — dan
+                  putarannya tetap berhenti begitu pengguna menyentuhnya. */}
+              <HeritageViewer
+                heritage={heritage}
+                fill
+                initialAutoRotate
+                idleLabel={dict.landing.stageIdle}
+              />
             </div>
           </main>
 

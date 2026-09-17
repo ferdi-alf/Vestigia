@@ -70,6 +70,7 @@ export function HeritageViewer({
   initialAutoRotate = false,
   initialHotspots = true,
   released = false,
+  fill = false,
 }: {
   heritage: Heritage;
   defer?: boolean;
@@ -110,6 +111,23 @@ export function HeritageViewer({
    * mengunduh atau mengurai apa pun lagi.
    */
   released?: boolean;
+  /**
+   * Isi penuh tinggi wadah pemanggil, bukan kotak beraspek tetap.
+   *
+   * **Ini memperbaiki cacat yang terukur, bukan menambah pilihan gaya.**
+   * Halaman warisan membungkus penampil ini dengan `h-[72svh]`, tetapi tinggi
+   * itu tidak pernah sampai ke kanvas: pembungkus di bawahnya cuma `relative`,
+   * dan tinggi sesungguhnya datang dari `aspect-[16/9]` di cangkangnya. Jadi
+   * yang berlaku `lebar_kolom x 9/16` — kebetulan mirip 72svh pada satu ukuran
+   * jendela saja. Di jendela yang lebih tinggi tersisa ruang mati di dalam
+   * bingkai membulat; di jendela yang lebih pendek kotak aspeknya melewati
+   * batas lalu dipotong.
+   *
+   * Dengan `fill`, tinggi mengalir dari wadah sampai ke kanvas dan kotak
+   * aspeknya dilepas. Landing tidak memakainya: di sana penampil berdiri di
+   * dalam aliran biasa dan memang harus punya tinggi sendiri.
+   */
+  fill?: boolean;
 }) {
   const { locale, dict } = useI18n();
   const controlsRef = useRef<OrbitControlsImpl | null>(null);
@@ -207,13 +225,16 @@ export function HeritageViewer({
   }, []);
 
   return (
-    <div ref={viewRef} className="relative">
+    <div ref={viewRef} className={cn("relative", fill && "h-full")}>
       <div
         ref={shellRef}
         tabIndex={0}
         role="application"
         aria-label={`${dict.viewer.label} — ${heritage.name[locale]}`}
-        className="relative aspect-[4/3] w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-gold sm:aspect-[16/10] lg:aspect-[16/9]"
+        className={cn(
+          "relative w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-gold",
+          fill ? "h-full" : "aspect-[4/3] sm:aspect-[16/10] lg:aspect-[16/9]",
+        )}
       >
       {mounted ? (
         <div className="fade-in h-full w-full">
@@ -221,7 +242,9 @@ export function HeritageViewer({
             heritage={heritage}
             locale={locale}
             loadingLabel={dict.viewer.loading}
+            closeLabel={dict.common.close}
             showHotspots={showHotspots}
+            bare={fill}
             autoRotate={autoRotate}
             active={active}
             onControlsReady={(instance) => {
@@ -233,7 +256,12 @@ export function HeritageViewer({
         /* Komposisi dasar permanen. Ia bukan bingkai kosong menunggu diisi:
            kalau WebGL tidak ada, dekoder gagal, atau skrip tidak pernah jalan,
            inilah yang tetap terlihat. */
-        <div className="stage-backdrop flex h-full w-full items-center justify-center rounded-xl border border-line">
+        <div
+          className={cn(
+            "stage-backdrop flex h-full w-full items-center justify-center",
+            !fill && "rounded-xl border border-line",
+          )}
+        >
           <p className="max-w-xs px-6 text-center text-xs leading-relaxed text-ink-dim">
             {idleLabel ?? dict.viewer.loading}
           </p>

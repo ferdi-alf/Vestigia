@@ -3,10 +3,13 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
 import { Environment, Lightformer, OrbitControls, useProgress } from "@react-three/drei";
+import type * as THREE from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import type { Heritage, Locale } from "@/data/types";
+import { cn } from "@/lib/cn";
+import { EASE, gsap } from "@/lib/motion/use-scroll-scene";
 import { HeritageModel, type ResolvedModel } from "./heritage-model";
-import { HotspotMarkers } from "./hotspot-markers";
+import { HotspotDetail, HotspotMarkers } from "./hotspot-markers";
 
 /** Sudut pandang bawaan kalau situs tidak menyetel presetnya sendiri. */
 const DEFAULT_CAMERA = { azimuth: -35, elevation: 22, distance: 1, targetY: 0.4 };
@@ -62,22 +65,91 @@ function LoadingVeil({ label }: { label: string }) {
  * Efeknya paling terasa di laptop dan ponsel: kipas tidak menyala dan baterai
  * tidak terkuras hanya karena satu tab terbuka di halaman ini.
  */
+/**
+ * Object berputar masuk saat dibuka, sekali.
+ *
+ * Digantung pada satu-satunya sambungan yang tepat: `resolved` berbalik
+ * `null -> ResolvedModel` PERSIS SEKALI, ketika model selesai dimuat dan
+ * dinormalkan. Sebelum itu tidak ada yang bisa diputar; sesudah itu tidak
+ * pernah terjadi lagi sampai panggungnya di-mount ulang — dan berpindah situs
+ * memang me-mount ulang, karena tiap warisan adalah route-nya sendiri.
+ *
+ * **`invalidate()` di tiap update bukan kehati-hatian berlebihan.** Kanvas ini
+ * `frameloop="demand"`: tidak ada satu pun bingkai yang tergambar sendiri. Tanpa
+ * dorongan itu yang terlihat cuma bingkai pertama dan terakhir — objectnya
+ * melompat ke pose akhir alih-alih berputar ke sana.
+ *
+ * Gerak dikurangi: tidak ada tween sama sekali, dan rotasinya dibiarkan nol.
+ * Object langsung berdiri pada pose akhirnya (§10).
+ */
+function EntranceSpin({ ready, children }: { ready: boolean; children: React.ReactNode }) {
+  const invalidate = useThree((state) => state.invalidate);
+  /* Grupnya DIMILIKI komponen ini, tidak diterima sebagai prop.
+
+     Menerima ref lalu menulis ke dalamnya berarti komponen mengubah nilai milik
+     pemanggilnya, dan `react-hooks/immutability` menolaknya dengan benar. Pola
+     yang sama sudah dipakai `advance` di globe pembuka dan `publish` di film
+     penyelaman: yang menulis adalah yang memiliki. */
+  const group = useRef<THREE.Group>(null);
+
+  useEffect(() => {
+    const node = group.current;
+    if (!node || !ready) return;
+
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      node.rotation.y = 0;
+      invalidate();
+      return;
+    }
+
+    const tween = gsap.fromTo(
+      node.rotation,
+      { y: -Math.PI * 0.62 },
+      {
+        y: 0,
+        duration: 1.5,
+        ease: EASE.enter,
+        onUpdate: invalidate,
+      },
+    );
+
+    return () => {
+      tween.kill();
+      node.rotation.y = 0;
+    };
+  }, [ready, invalidate]);
+
+  return <group ref={group}>{children}</group>;
+}
+
 export function HeritageStage({
   heritage,
   locale,
   loadingLabel,
+  closeLabel,
   showHotspots,
   autoRotate,
   active,
+  bare = false,
   onControlsReady,
 }: {
   heritage: Heritage;
   locale: Locale;
   loadingLabel: string;
+  closeLabel: string;
   showHotspots: boolean;
   autoRotate: boolean;
   /** false ketika kanvas keluar layar atau tab disembunyikan */
   active: boolean;
+  /**
+   * Lepaskan bingkai milik panggung sendiri.
+   *
+   * Dipakai ketika pemanggilnya SUDAH memberi bingkai. Tanpa ini halaman
+   * warisan menumpuk dua: `rounded-2xl border` miliknya membungkus
+   * `rounded-xl border` milik panggung, berjarak satu piksel — dua garis
+   * sejajar yang terbaca sebagai kesalahan render, bukan sebagai desain.
+   */
+  bare?: boolean;
   onControlsReady?: (controls: OrbitControlsImpl | null) => void;
 }) {
   const [resolved, setResolved] = useState<ResolvedModel | null>(null);
@@ -92,7 +164,12 @@ export function HeritageStage({
   const handleReady = useCallback((result: ResolvedModel) => setResolved(result), []);
 
   return (
-    <div className="stage-backdrop relative h-full w-full overflow-hidden rounded-xl border border-line">
+    <div
+      className={cn(
+        "stage-backdrop relative h-full w-full overflow-hidden",
+        !bare && "rounded-xl border border-line",
+      )}
+    >
       <Canvas
         /* "demand" sudah berarti tidak menggambar tanpa perubahan, tetapi
            "never" lebih tegas: saat panggung keluar layar atau tab berpindah,
@@ -130,7 +207,11 @@ export function HeritageStage({
         <ResumeOnActive active={active} />
 
         <Suspense fallback={null}>
-          <HeritageModel heritage={heritage} onReady={handleReady} />
+          {/* Model sudah dinormalkan ke titik asal oleh `normalizeModel`, jadi
+              memutar grup pembungkusnya memutarnya tepat pada sumbunya sendiri. */}
+          <EntranceSpin ready={resolved !== null}>
+            <HeritageModel heritage={heritage} onReady={handleReady} />
+          </EntranceSpin>
         </Suspense>
 
         {/* Environment dirakit dari lightformer, bukan diunduh sebagai HDR.
@@ -181,6 +262,21 @@ export function HeritageStage({
       </Canvas>
 
       {resolved ? null : <LoadingVeil label={loadingLabel} />}
+
+      {/* Keterangan hotspot hidup DI SINI, di luar `<Canvas>`.
+
+          Di dalam `<Html>` ia punya dua masalah sekaligus: ia menimpa bagian
+          object yang sedang ditunjuk, dan `occlude="blending"` ikut mencampurnya
+          dengan geometri di depannya sehingga teksnya sendiri jadi buram. Di
+          lapisan ini tidak ada occlusion sama sekali, dan ia bisa bertambat ke
+          tepi bawah wadah alih-alih mengambang di atas subjeknya. */}
+      <HotspotDetail
+        heritage={heritage}
+        locale={locale}
+        activeId={showHotspots ? activeHotspot : null}
+        onClose={() => setActiveHotspot(null)}
+        closeLabel={closeLabel}
+      />
     </div>
   );
 }
