@@ -4,6 +4,7 @@ import { Dive } from "@/concepts/a/dive";
 import { Relic } from "@/concepts/a/relic";
 import { HandoffProvider } from "@/concepts/a/handoff";
 import { World } from "@/concepts/a/world";
+import { Preview } from "@/concepts/a/preview";
 import { Invite } from "@/concepts/a/invite";
 
 /**
@@ -66,6 +67,11 @@ export default function HomePage() {
         {heritage ? <Relic heritage={heritage} /> : null}
       </HandoffProvider>
       <World points={points} />
+      {/* Pratinjau halaman warisan — tangkapan layar sungguhan di dalam bingkai
+          peramban, dengan empat garis yang menunjuk isinya. Diletakkan tepat
+          sebelum kartu undangan: ia memperlihatkan apa yang ditemukan di balik
+          CTA itu, jadi ajakannya berdiri di atas sesuatu yang sudah dilihat. */}
+      <Preview />
       {heritage ? <Invite heritage={heritage} /> : null}
     </ConceptFrame>
   );

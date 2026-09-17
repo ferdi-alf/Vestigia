@@ -75,6 +75,46 @@ export const A_COPY = {
   worldAll: { id: "Semua benua", en: "All continents" },
   worldSites: { id: "situs", en: "sites" },
 
+  /* ── Pratinjau halaman warisan ────────────────────────────────────────
+     Section ini memperlihatkan halaman warisan sebagai TANGKAPAN LAYAR di
+     dalam bingkai peramban, bukan sebagai janji. Teksnya karena itu menyebut
+     apa yang benar-benar terlihat di gambar itu — tidak ada satu pun fitur
+     yang disebut di sini yang tidak berdiri di layar sebelahnya. */
+  previewKicker: { id: "Di dalam satu situs", en: "Inside one site" },
+  previewTitle: {
+    id: "Ruang baca yang bisa diputar.",
+    en: "A reading room you can turn.",
+  },
+  previewLead: {
+    id: "Setiap warisan membuka satu halaman kerja: koleksinya di kiri, objectnya di tengah, dan keterangannya di kanan. Yang di bawah ini tangkapan layar halaman itu apa adanya.",
+    en: "Every heritage opens one workspace: the collection on the left, the object in the middle, its record on the right. Below is a screenshot of that page as it is.",
+  },
+  previewShot: {
+    id: "Tangkapan layar halaman warisan Borobudur: pemilih benua dan daftar koleksi di kiri, model 3D di tengah, keterangan dan pemandu di kanan.",
+    en: "Screenshot of the Borobudur heritage page: continent filter and collection list on the left, the 3D model in the middle, the record and guide on the right.",
+  },
+
+  previewBenuaLabel: { id: "Saring per benua", en: "Filter by continent" },
+  previewBenuaBody: {
+    id: "Lima benua, dan angkanya dihitung dari koleksi — bukan ditulis tangan.",
+    en: "Five continents, and the counts come from the collection — not hand-written.",
+  },
+  previewKoleksiLabel: { id: "Lima belas object 3D", en: "Fifteen 3D objects" },
+  previewKoleksiBody: {
+    id: "Tiap baris membuka model yang bisa diputar, didekati, dan diperiksa dari segala sisi.",
+    en: "Each row opens a model you can turn, approach, and inspect from every side.",
+  },
+  previewPemanduLabel: { id: "Pemandu yang menolak mengarang", en: "A guide that refuses to invent" },
+  previewPemanduBody: {
+    id: "Menjawab dari data situs yang sedang dibuka, dan mengatakan ketika sesuatu tidak ada di sana.",
+    en: "It answers from the data of the site you are viewing, and says so when something is not there.",
+  },
+  previewKuisLabel: { id: "Kuis dari data yang sama", en: "A quiz from the same data" },
+  previewKuisBody: {
+    id: "Soalnya disusun dari basis pengetahuan situs itu, jadi ia tidak pernah menanyakan yang tidak tercatat.",
+    en: "Its questions are built from that site's knowledge base, so it never asks what was never recorded.",
+  },
+
   /* ── Kartu undangan ──────────────────────────────────────────────────── */
   inviteTitle: { id: "Mulai dari satu tempat.", en: "Begin with one place." },
   inviteLead: {
