@@ -66,7 +66,7 @@ export function Dive({ heritage, marks }: { heritage: Heritage; marks: GlobeMark
   const root = useRef<HTMLElement>(null);
   const stage = useRef<HTMLDivElement>(null);
   const progress = useRef<DiveProgress>({ value: 0, intro: 0 });
-  const [gateRef, { active, entered }] = useInView<HTMLDivElement>({ rootMargin: "200px" });
+  const [gateRef, { active, entered, visible }] = useInView<HTMLDivElement>({ rootMargin: "200px" });
   const still = useStillPreference();
 
   /* Pemilik kotak progres ada di sini, dan hanya di sini.
@@ -110,9 +110,18 @@ export function Dive({ heritage, marks }: { heritage: Heritage; marks: GlobeMark
             `active` mematikan loop render saat kanvas keluar layar atau tab
             disembunyikan; `passed` MELEPASNYA sama sekali begitu panggung
             benar-benar lewat, supaya section di bawah tidak pernah berbagi
-            halaman dengan konteks WebGL kedua. */}
+            halaman dengan konteks WebGL kedua.
+
+            Syarat ketiga hanya berlaku saat gerak dikurangi, dan ia menambal
+            lubang yang dibuka oleh §10 sendiri: `passed` datang dari
+            ScrollTrigger, dan saat gerak dikurangi tidak satu pun ScrollTrigger
+            dipasang — jadi panggung ini tidak pernah dilepas, dan terukur di
+            peramban halaman berakhir memegang TIGA konteks WebGL sekaligus.
+            `visible` tidak bergantung pada ScrollTrigger sama sekali. Dipakai
+            `visible` dan bukan `active` supaya berpindah tab tidak melepas dan
+            memasang ulang panggungnya. */}
         <div ref={gateRef} className="absolute inset-0 z-[1]">
-          {entered && !passed ? (
+          {entered && !passed && (!still || visible) ? (
             <GlobeStage
               marks={marks}
               targetSlug={heritage.slug}

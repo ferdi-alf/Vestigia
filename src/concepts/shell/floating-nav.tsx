@@ -134,10 +134,15 @@ export function FloatingNav({
         aria-label="Primary"
         data-solid="false"
         className={cn(
-          "shell pointer-events-auto flex items-center gap-4",
+          /* Jarak dan bantalan mengetat di layar paling sempit.
+
+             Pada 375px isi navbar — merek, pemilih bahasa, dan CTA — berjumlah
+             377px sebelum bantalan, dan halaman ikut menggeser 48px ke samping.
+             §9 tidak menawar soal itu: tidak pernah ada scroll horizontal. */
+          "shell pointer-events-auto flex items-center gap-2 sm:gap-4",
           "transition-[background-color,border-color,box-shadow] duration-500",
           variant === "a" && [
-            "h-14 rounded-full border border-transparent px-5",
+            "h-14 rounded-full border border-transparent px-3 sm:px-5",
             "data-[solid=true]:border-line data-[solid=true]:bg-surface/72 data-[solid=true]:backdrop-blur-lg",
           ],
           variant === "b" && [
@@ -205,7 +210,13 @@ export function FloatingNav({
                 : buttonClass({ size: "sm" }),
             )}
           >
-            {dict.landing.heroPrimary}
+            {/* Label yang lebih pendek di bawah `sm`, bukan tombol yang
+                dihilangkan. Di ponsel daftar tautan navbar sudah tersembunyi,
+                jadi CTA ini satu-satunya aksi yang tersisa di sana — membuangnya
+                akan meninggalkan navbar tanpa satu pun tujuan. Keduanya kalimat
+                yang sudah ada di kamus, bukan teks baru yang ditulis di sini. */}
+            <span className="sm:hidden">{dict.nav.explore}</span>
+            <span className="hidden sm:inline">{dict.landing.heroPrimary}</span>
           </Link>
         </div>
       </nav>

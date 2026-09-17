@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 import type { Heritage } from "@/data/types";
 import { HeritageViewer } from "@/components/three/heritage-viewer";
+import { useInView } from "@/lib/motion/use-in-view";
+import { useStillPreference } from "@/lib/motion/use-still-preference";
 import { buttonClass } from "@/components/ui/button";
 import { useI18n } from "@/lib/i18n/client";
 import { useMotionTier } from "@/lib/motion/use-motion-tier";
@@ -82,6 +84,21 @@ export function Relic({ heritage }: { heritage: Heritage }) {
      penampil ini terpasang berarti dua konteks WebGL hidup pada satu halaman,
      dan §7 menuntut satu. */
   const [released, setReleased] = useState(false);
+
+  /**
+   * Gerbang kedua untuk penampil, dan ia hanya bekerja saat gerak dikurangi.
+   *
+   * `released` di atas digerakkan ScrollTrigger, dan §10 menuntut ScrollTrigger
+   * TIDAK DIPASANG SAMA SEKALI saat gerak dikurangi — jadi pada mode itu
+   * penampil ini tidak pernah punya cara untuk dilepas. Terukur di peramban:
+   * setelah melewati ketiga section, halaman memegang tiga konteks WebGL
+   * sekaligus, dan §7 memberi jatah satu.
+   *
+   * `visible`, bukan `active`: berpindah tab tidak boleh membuang model yang
+   * sudah terurai dan sudut kamera yang sudah diatur pengguna.
+   */
+  const still = useStillPreference();
+  const [viewerGate, { visible }] = useInView<HTMLDivElement>({ rootMargin: "200px" });
 
   const [lat, lon] = heritage.coordinates;
   const coordinate = `${Math.abs(lat).toFixed(2)}°${lat >= 0 ? "N" : "S"}  ${Math.abs(lon).toFixed(2)}°${lon >= 0 ? "E" : "W"}`;
@@ -166,6 +183,7 @@ export function Relic({ heritage }: { heritage: Heritage }) {
               pita kosong hanya akan memangkas lebar penampil tanpa alasan. */}
           <div className="lg:px-[9.5rem] lg:py-12">
             <div
+              ref={viewerGate}
               data-obj-frame
               data-beam="a-obj-frame"
               className="overflow-hidden rounded-2xl border border-line"
@@ -175,7 +193,7 @@ export function Relic({ heritage }: { heritage: Heritage }) {
                 defer
                 initialAutoRotate
                 initialHotspots={false}
-                released={released}
+                released={released || (still && !visible)}
                 idleLabel={dict.landing.stageIdle}
               />
             </div>

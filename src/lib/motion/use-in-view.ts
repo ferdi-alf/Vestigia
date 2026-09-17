@@ -23,6 +23,16 @@ export interface InViewState {
   active: boolean;
   /** pernah terlihat — sekali benar, selamanya benar */
   entered: boolean;
+  /**
+   * Ada di dalam viewport, TANPA melihat status tab.
+   *
+   * Saudara sempit dari `active`, dan pemisahan itu punya satu pemakai yang
+   * jelas: melepas konteks WebGL saat gerak dikurangi. Di sana `active` salah
+   * alat — ia ikut turun ketika tab sekadar disembunyikan, dan melepas lalu
+   * memasang ulang panggung 3D tiap kali pengguna berpindah tab jauh lebih
+   * mahal daripada membiarkannya diam.
+   */
+  visible: boolean;
 }
 
 export interface InViewOptions {
@@ -80,5 +90,5 @@ export function useInView<T extends HTMLElement>(
     return () => document.removeEventListener("visibilitychange", sync);
   }, []);
 
-  return [ref, { active: visible && pageVisible, entered }];
+  return [ref, { active: visible && pageVisible, entered, visible }];
 }
