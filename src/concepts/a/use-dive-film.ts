@@ -2,7 +2,7 @@
 
 import type { RefObject } from "react";
 import type { DiveProgress } from "@/components/three/globe-stage";
-import { SCRUB, STATE, STILL_PROGRESS } from "./dive-beats";
+import { LIGHT_FROM, LIGHT_TO, SCRUB, STATE, STILL_PROGRESS } from "./dive-beats";
 import { EASE, gsap, useScrollScene } from "@/lib/motion/use-scroll-scene";
 
 /**
@@ -64,6 +64,8 @@ export function useDiveFilm(
       const bridge = node.querySelector<HTMLElement>("[data-dive-bridge]");
       const hint = node.querySelector<HTMLElement>("[data-dive-hint]");
       const dust = node.querySelector<HTMLElement>("[data-dive-dust]");
+      const lightL = node.querySelector<HTMLElement>('[data-dive-light="left"]');
+      const lightR = node.querySelector<HTMLElement>('[data-dive-light="right"]');
       const layers = q<HTMLElement>("[data-layer]");
 
       /* Navbar tinggal DI LUAR section ini — ia saudara `Dive` di dalam
@@ -90,6 +92,15 @@ export function useDiveFilm(
         publish({ value: STILL_PROGRESS, intro: 1 });
         gsap.set(hint, { autoAlpha: 0 });
         gsap.set(dust, { autoAlpha: 0.3 });
+        /* Cahaya dibiarkan TERBUKA, bukan tertutup.
+
+           Versi tirai yang lama menutup penuh saat gerak dikurangi, karena di
+           sana bidang itu memang tujuan akhirnya. Di sini tidak: bingkai diam
+           yang dipilih `STILL_PROGRESS` adalah 0,12 — globe utuh di kanan,
+           penanda menyala, teks penuh. Menutupnya berarti menutupi persis
+           komposisi yang baru saja dipilih sebagai yang paling menjelaskan. */
+        gsap.set(lightL, { xPercent: -101 });
+        gsap.set(lightR, { xPercent: 101 });
         return;
       }
 
@@ -116,6 +127,8 @@ export function useDiveFilm(
          teksnya tetap terbaca alih-alih hilang sama sekali. */
       gsap.set(bridge, { autoAlpha: 0 });
       gsap.set(dust, { autoAlpha: 0 });
+      gsap.set(lightL, { xPercent: -101 });
+      gsap.set(lightR, { xPercent: 101 });
 
       const film = gsap.timeline({
         defaults: { ease: EASE.scrub },
@@ -192,7 +205,24 @@ export function useDiveFilm(
            `close`, lalu pergi saat globe mulai naik. Teks yang masih bergerak
            saat ia harus dibaca adalah teks yang tidak dibaca siapa pun. */
         .to(bridge, { autoAlpha: 1, duration: 0.04 }, STATE.close.from)
-        .to(bridge, { autoAlpha: 0, duration: 0.04 }, STATE.close.to - 0.05);
+        .to(bridge, { autoAlpha: 0, duration: 0.04 }, STATE.close.to - 0.05)
+
+        /* ── Cahaya menutup ────────────────────────────────────────────
+           Dua bidang datang dari dua sisi selagi kamera MASIH menembus kerak
+           di bawahnya — jendelanya memotong `enter`, tidak menunggunya
+           selesai. Kalau dibuat berurutan akan ada satu momen panggung yang
+           sudah dilewati globe tetapi belum ditutup cahaya, dan bidang kosong
+           bukan komposisi yang disengaja.
+
+           `-101`, bukan `-100`: satu persen lebih jauh menjamin panelnya
+           benar-benar di luar bingkai pada bingkai pertama, berapa pun
+           pembulatan subpiksel yang dilakukan peramban.
+
+           Linear, mewarisi `EASE.scrub` dari timeline. Scrub yang di-ease
+           tidak bisa ditelusuri balik dengan jujur: menggulir ke atas akan
+           menempuh jalur yang berbeda dari saat turun. */
+        .to(lightL, { xPercent: 0, duration: LIGHT_TO - LIGHT_FROM }, LIGHT_FROM)
+        .to(lightR, { xPercent: 0, duration: LIGHT_TO - LIGHT_FROM }, LIGHT_FROM);
     },
     scope,
     [],

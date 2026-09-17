@@ -208,6 +208,51 @@
     background:
       radial-gradient(120% 90% at 50% 12%, #fdfaf3 0%, #f5eee0 46%, #e8dfcb 100%);
   }
+
+  /* ── Cahaya penutup ─────────────────────────────────────────────────
+     Dua bidang yang menutup dari kiri dan kanan di ujung penyelaman, lalu
+     TINGGAL sebagai latar tempat "Yang Hilang" berdiri.
+
+     Aritmetikanya yang membuatnya bekerja, dan ia tidak boleh disetel
+     sembarangan. Panel selebar 62% dengan bagian pekat sampai 82% berarti
+     bagian pekatnya sendiri selebar 0,82 x 62% = 50,8% layar — sudah melewati
+     tengah. Jadi saat keduanya menutup, yang bertemu di tengah adalah dua
+     bidang PEKAT, sementara ujung yang melandai hanya pernah jatuh di atas
+     bagian pekat panel seberangnya.
+
+     Dua gradien yang masing-masing melandai ke transparan TIDAK boleh bertemu
+     di tengah: dua setengah-transparan yang ditumpuk menghasilkan 75%, bukan
+     100%, dan yang terlihat adalah pita lebih gelap persis di garis temunya.
+
+     Warnanya sedikit di atas `--color-paper`. Ia cahaya pertama yang menyapu
+     penggalian, bukan lembar kertas — premis yang sama yang dipakai
+     `.stage-backdrop`, digeser satu langkah lebih terang. */
+  .light-wipe-l {
+    background-image: linear-gradient(
+      to right,
+      #fdfbf6 0%,
+      #fdfbf6 82%,
+      color-mix(in oklab, #fdfbf6 55%, transparent) 92%,
+      transparent 100%
+    );
+  }
+
+  .light-wipe-r {
+    background-image: linear-gradient(
+      to left,
+      #fdfbf6 0%,
+      #fdfbf6 82%,
+      color-mix(in oklab, #fdfbf6 55%, transparent) 92%,
+      transparent 100%
+    );
+  }
+
+  /* Bidang yang SAMA, diam. Dipakai puncak "Yang Hilang" supaya panggung yang
+     meluncur pergi menyerahkan permukaan yang sewarna persis — sambungannya
+     jadi tidak terlihat, bukan sekadar mirip. */
+  .light-field {
+    background-image: linear-gradient(to bottom, #fdfbf6 0%, transparent 100%);
+  }
 }
 
 /* ══════════════════════════════════════════════════════════════════

@@ -19,18 +19,30 @@
  *
  * ---
  *
- * **EMPAT KEADAAN, DAN SATU YANG BUKAN KEADAAN.**
+ * **EMPAT KEADAAN, DAN DUA YANG BUKAN KEADAAN.**
  *
  *   masuk      berbasis WAKTU, saat mount — teks naik, globe memudar masuk
- *   0,00–0,10  arrive   globe utuh di kanan, penanda menyala barat ke timur
- *   0,10–0,55  turn     globe berputar seiring scroll · teks hero mundur
- *   0,55–0,85  close    globe mendekat sambil terus berputar · jembatan dibaca
- *   0,85–1,00  hand     globe naik keluar bingkai · 14 penanda padam, satu tinggal
+ *   0,00–0,07  arrive   globe utuh di kanan, penanda menyala barat ke timur
+ *   0,07–0,42  turn     globe berputar seiring scroll · teks hero mundur
+ *   0,42–0,65  close    kamera jatuh ke permukaan · jembatan dibaca
+ *   0,65–1,00  enter    menembus kerak · permukaan memenuhi bingkai lalu lewat
+ *   0,66–0,80  cahaya   MEMOTONG `enter` — lihat LIGHT_FROM di bawah
  *
  * Animasi masuk sengaja TIDAK jadi keadaan. Ia satu-satunya gerak di section ini
  * yang tidak dipegang scroll, dan mencampurnya ke dalam progres akan membuat
  * bingkai pertama bergantung pada posisi gulir — padahal ia harus terjadi justru
  * ketika belum ada yang digulir.
+ *
+ * Cahaya penutup juga bukan keadaan, dengan alasan yang berbeda: ia MEMOTONG
+ * `enter` alih-alih menggantikannya. Penembusan tetap berjalan di bawahnya
+ * sampai habis — yang terjadi bukan satu beat berhenti lalu beat lain mulai,
+ * melainkan satu bidang yang naik menutupi beat yang masih berlangsung.
+ *
+ * **Angka di blok ini pernah berbohong.** Sampai sesi ini header di sini masih
+ * menyebut `0,10 / 0,55 / 0,85` dan menamai beat keempat `hand`, padahal kodenya
+ * sudah lama memakai `0,07 / 0,42 / 0,65` dan `enter`. Komentar yang meleset dari
+ * kodenya lebih berbahaya daripada tidak ada komentar: ia dibaca sebagai
+ * kebenaran lalu dipakai menghitung.
  */
 
 /**
@@ -43,14 +55,15 @@
 export const SCRUB = 0.7;
 
 /**
- * Empat keadaan, batasnya tidak tumpang tindih — dan batas 0,67 itu BUKAN angka
- * bulat yang dipilih karena enak dilihat.
+ * Empat keadaan, batasnya tidak tumpang tindih — dan batas `enter` itu BUKAN
+ * angka bulat yang dipilih karena enak dilihat.
  *
  * Section setinggi 260svh dengan panggung lengket 100svh berarti panggungnya
  * lepas setelah 160svh digulir. Dengan `end: "bottom top"`, progres 1 jatuh saat
  * section benar-benar habis pada 260svh — jadi panggung lepas tepat pada
- * 160/260 = 0,615. Beat `enter` dimulai sedikit sesudahnya supaya penembusan
- * dimulai saat panggungnya SUDAH mulai meluncur, bukan sedetik sebelumnya.
+ * 160/260 = 0,615. Beat `enter` dimulai pada 0,65, sedikit sesudahnya, supaya
+ * penembusan dimulai saat panggungnya SUDAH mulai meluncur — bukan sedetik
+ * sebelumnya.
  */
 export const STATE = {
   /** globe utuh di kanan, penanda menyala berurutan, teks terbaca */
@@ -117,6 +130,34 @@ export const TOTAL_TURN = 165;
  * pergi.
  */
 export const ENTER_FADE_FROM = 0.55;
+
+/* ── Cahaya penutup ─────────────────────────────────────────────────────
+   Dua bidang cahaya menutup dari kiri dan kanan sampai bertemu di tengah, dan
+   bidang yang tertutup itu MENJADI latar tempat "Yang Hilang" berdiri. Ia bukan
+   transisi yang datang lalu pergi; ia permukaan halaman berikutnya yang sampai
+   lebih dulu.
+
+   Mekanismenya pernah hidup di project ini sebagai tirai kertas yang
+   menyerahkan bingkai dari video ke globe, lalu ikut terhapus bersama
+   videonya. Yang dipulihkan mekanismenya; yang berubah wataknya — dulu dua
+   pintu kertas, sekarang cahaya.
+
+   **Jendelanya MEMOTONG `enter`, dan itu disengaja.** Penembusan bumi tidak
+   berhenti untuk memberi jalan: kamera terus jatuh menembus kerak sementara
+   cahaya naik menutupinya. Kalau keduanya dibuat berurutan, akan ada satu
+   momen panggung kosong di antaranya — §6 menuntut komposisi yang disengaja di
+   tiap kedalaman scroll, dan bidang kosong bukan salah satunya.
+
+   Batas atasnya diukur, bukan dikira: pada sesi lalu judul "Yang Hilang" mulai
+   terbaca sekitar progres 0,82. Cahaya karena itu wajib tertutup penuh
+   SEBELUM itu, kalau tidak judulnya muncul dari balik bidang yang masih
+   setengah terbuka. */
+
+/** Progres saat tepi cahaya mulai masuk dari kedua sisi. */
+export const LIGHT_FROM = 0.66;
+
+/** Progres saat keduanya bertemu dan bidangnya penuh. */
+export const LIGHT_TO = 0.8;
 
 /** 0 sebelum keadaan mulai, 1 setelah selesai. Linear di dalamnya. */
 export function stateProgress(progress: number, name: StateName): number {

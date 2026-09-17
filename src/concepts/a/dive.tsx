@@ -44,7 +44,13 @@ const DUST = slot("a-dust");
  *     z-0    lapisan      medan strata, kanvas 2D; paling belakang
  *     z-[1]  kanvas 3D    globe, satu-satunya subjek
  *     z-[2]  debu         di DEPAN subjek; debu di belakang subjek cuma tekstur
+ *     z-[3]  cahaya       menutup dari dua sisi di ujung, lalu TINGGAL
  *     z-10   teks
+ *
+ * Cahaya wajib di ATAS globe dan debu, karena keduanyalah yang sedang ia sapu.
+ * Ia tetap di bawah teks: pada saat ia bekerja teks hero sudah lama pergi, dan
+ * menaruhnya di atas berarti satu-satunya lapisan yang boleh menutupi teks
+ * adalah lapisan yang tidak pernah bertemu teks.
  *
  * Latar strata berbagi gerbang `useInView` yang sama dengan globe alih-alih
  * memasang pengamatnya sendiri. Satu section, satu pengamat: dua yang mengawasi
@@ -137,6 +143,29 @@ export function Dive({ heritage, marks }: { heritage: Heritage; marks: GlobeMark
         <div data-dive-dust className="absolute inset-0 z-[2]">
           <MediaLayer slot={DUST} sizes="100vw" />
         </div>
+
+        {/* z-[3] · cahaya penutup.
+
+            Lebarnya 62%, bukan 50%, dan angka itu berpasangan dengan gradien di
+            `.light-wipe-*`: bagian pekatnya berhenti di 82%, jadi 0,82 x 62% =
+            50,8% layar — kedua bidang pekat sudah melewati tengah sebelum
+            bertemu. Ujung yang melandai karena itu tidak pernah bertemu ujung
+            melandai lainnya, dan tidak ada pita lebih gelap di garis temunya.
+
+            Keduanya digerakkan `transform` saja; §4 melarang menganimasikan
+            `width` atau `left`. Posisi awalnya dipasang GSAP, bukan CSS —
+            tanpa JavaScript bidang ini duduk diam di tempatnya dan halaman
+            tetap terbaca. */}
+        <div
+          data-dive-light="left"
+          aria-hidden="true"
+          className="light-wipe-l pointer-events-none absolute inset-y-0 left-0 z-[3] w-[62%]"
+        />
+        <div
+          data-dive-light="right"
+          aria-hidden="true"
+          className="light-wipe-r pointer-events-none absolute inset-y-0 right-0 z-[3] w-[62%]"
+        />
 
         <div className="shell relative z-10">
           {/* ══ Sambutan ══════════════════════════════════════════════ */}

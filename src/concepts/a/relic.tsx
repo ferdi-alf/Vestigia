@@ -149,7 +149,24 @@ export function Relic({ heritage }: { heritage: Heritage }) {
       aria-labelledby="a-relic-title"
       className="relative py-24 sm:py-32"
     >
-      <div className="shell grid items-center gap-12 lg:grid-cols-12 lg:gap-8">
+      {/* Sambungan dari penyelaman.
+
+          Penyelaman berakhir dengan dua bidang cahaya yang menutup sampai
+          bertemu di tengah, dan bidang itu dimaksudkan sebagai LATAR section
+          ini — bukan sekadar transisi yang kebetulan berwarna mirip. Panggung
+          lengket di atas meluncur pergi sementara bidang ini sudah berdiri di
+          bawahnya, jadi yang diserahkan adalah permukaan yang sama persis.
+
+          Memudar ke bawah, bukan pekat sepanjang section: cahaya pertama jatuh
+          di puncak penggalian dan mengendap ke kapur di bawahnya — bahasa yang
+          sama dengan `.stage-backdrop`. Ia `aria-hidden` dan tidak menerima
+          pointer; seluruh isinya tetap ada tanpa lapisan ini. */}
+      <div
+        aria-hidden="true"
+        className="light-field pointer-events-none absolute inset-x-0 top-0 h-[42svh]"
+      />
+
+      <div className="shell relative grid items-center gap-12 lg:grid-cols-12 lg:gap-8">
         {/* ══ Kiri — kenapa object ini ada di sini ══════════════════ */}
         <div className="lg:col-span-4">
           <span data-reveal aria-hidden="true" className="carved-edge" />
