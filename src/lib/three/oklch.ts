@@ -46,6 +46,21 @@
  */
 export const ACCENT = { lightness: 0.48, chroma: 0.13 } as const;
 
+/**
+ * Pasangan yang sama untuk object yang berdiri DI ATAS globe, dan angkanya
+ * sengaja berlawanan arah.
+ *
+ * `ACCENT` gelap karena latarnya kertas terang. Di atas bola bumi latarnya
+ * terbalik — laut biru tua dan daratan hijau tua — jadi object yang memakai
+ * `ACCENT` mendarat lebih gelap daripada tanah yang dipijaknya dan hilang di
+ * dalamnya. Lightness dinaikkan supaya ia menyembul, chroma diturunkan supaya
+ * ia tetap terbaca sebagai batu yang disinari dan bukan sebagai penanda plastik.
+ *
+ * Hue-nya tetap hue benua yang sama, jadi bola dan daftar di sebelahnya masih
+ * satu sistem wayfinding.
+ */
+export const RELIC_ACCENT = { lightness: 0.72, chroma: 0.075 } as const;
+
 const cube = (n: number) => n * n * n;
 
 /** Linear-light → sRGB terkode gamma. */

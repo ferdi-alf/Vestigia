@@ -141,6 +141,37 @@ function finish(canvas: HTMLCanvasElement, srgb: boolean): Texture {
   return texture;
 }
 
+/* Tiga lapisan dengan blur menurun, bukan satu isian tajam.
+
+   Satu isian putih bertepi keras menghasilkan dinding tegak lurus di garis
+   pantai — daratan terbaca seperti kue yang dicetak, bukan seperti benua.
+   Berlapis begini, tepinya melandai keluar seperti landas kontinen dan
+   pedalamannya berdiri paling tinggi. `evenodd` wajib: tanpanya laut pedalaman
+   seperti Kaspia ikut terisi.
+
+   Blur-nya dalam ruang yang SUDAH diskalakan 2,84x, jadi angka di sini bukan
+   piksel kanvas melainkan derajat. */
+const SHELVES: { blur: number; alpha: number }[] = [
+  { blur: 1.6, alpha: 0.42 },
+  { blur: 0.6, alpha: 0.34 },
+  { blur: 0, alpha: 0.24 },
+];
+
+/**
+ * Seberapa putih pedalaman benua benar-benar jadi, 0..1.
+ *
+ * **Bukan 1, dan selisihnya menentukan di mana sebuah candi berdiri.**
+ * Ketiga lapisan di atas dikomposit dengan alfa, bukan ditumpuk sampai penuh,
+ * jadi nilai tertinggi peta ini adalah `1 - (1-0,42)(1-0,34)(1-0,24)` — sekitar
+ * 0,71, bukan putih penuh. `displacementScale` mengalikan NILAI PETA, sehingga
+ * daratan naik setinggi `RELIEF x 0,71` dan bukan setinggi `RELIEF`.
+ *
+ * Angkanya diekspor, bukan disalin ke komponen, supaya ia ikut berubah sendiri
+ * kalau `SHELVES` disetel lagi. Object yang ditempatkan pada `RELIEF` penuh akan
+ * melayang di atas tanah dengan celah yang terlihat.
+ */
+export const LAND_COVERAGE = 1 - SHELVES.reduce((rest, shelf) => rest * (1 - shelf.alpha), 1);
+
 /** Peta ketinggian: laut hitam, daratan putih, dan DI ANTARANYA yang penting. */
 function paintHeight(land: Path2D): HTMLCanvasElement | null {
   const height = surface();
@@ -153,24 +184,8 @@ function paintHeight(land: Path2D): HTMLCanvasElement | null {
   h.save();
   h.scale(SCALE, SCALE);
 
-  /* Tiga lapisan dengan blur menurun, bukan satu isian tajam.
-
-     Satu isian putih bertepi keras menghasilkan dinding tegak lurus di garis
-     pantai — daratan terbaca seperti kue yang dicetak, bukan seperti benua.
-     Berlapis begini, tepinya melandai keluar seperti landas kontinen dan
-     pedalamannya berdiri paling tinggi. `evenodd` wajib: tanpanya laut
-     pedalaman seperti Kaspia ikut terisi.
-
-     Blur-nya dalam ruang yang SUDAH diskalakan 2,84x, jadi angka di sini
-     bukan piksel kanvas melainkan derajat. */
-  const shelves: { blur: number; alpha: number }[] = [
-    { blur: 1.6, alpha: 0.42 },
-    { blur: 0.6, alpha: 0.34 },
-    { blur: 0, alpha: 0.24 },
-  ];
-
   h.fillStyle = "#ffffff";
-  for (const shelf of shelves) {
+  for (const shelf of SHELVES) {
     h.filter = shelf.blur > 0 ? `blur(${shelf.blur}px)` : "none";
     h.globalAlpha = shelf.alpha;
     h.fill(land, "evenodd");

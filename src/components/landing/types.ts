@@ -14,4 +14,11 @@ export interface MapPoint {
   continent: Continent;
   lat: number;
   lon: number;
+  /**
+   * Proxy geometri-saja untuk berdiri di atas globe, kalau ada.
+   *
+   * Opsional dengan sengaja: section Dunia jatuh ke penanda titik untuk warisan
+   * yang belum punya proxy, bukan menghilangkannya dari bola.
+   */
+  proxy?: string;
 }

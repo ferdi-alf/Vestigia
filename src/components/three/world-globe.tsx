@@ -1,15 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Environment, Lightformer } from "@react-three/drei";
+import { Environment, Lightformer, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import type { Continent } from "@/data/types";
 import { CONTINENT_INFO } from "@/data/continents";
 import { latLonToVector3 } from "@/lib/geo";
-import { createReliefMaps, type ReliefColors } from "@/lib/three/relief-texture";
+import { createReliefMaps, LAND_COVERAGE, type ReliefColors } from "@/lib/three/relief-texture";
 import { readTokens } from "@/lib/read-tokens";
-import { ACCENT, oklchToRgb } from "@/lib/three/oklch";
+import { ACCENT, RELIC_ACCENT, oklchToRgb } from "@/lib/three/oklch";
 import { EASE, gsap } from "@/lib/motion/use-scroll-scene";
 
 export interface WorldMark {
@@ -17,7 +17,20 @@ export interface WorldMark {
   lat: number;
   lon: number;
   continent: Continent;
+  /** Proxy geometri-saja. Tanpa ini warisan tetap tampil, sebagai titik. */
+  proxy?: string;
 }
+
+/** Penanda yang sudah punya tempat, arah tegak, dan warna benuanya. */
+type PlacedMark = WorldMark & {
+  position: THREE.Vector3;
+  normal: THREE.Vector3;
+  quaternion: THREE.Quaternion;
+  /** Warna object yang berdiri — terang, untuk latar bola yang gelap. */
+  color: THREE.Color;
+  /** Warna penanda titik cadangan — gelap, pasangan lama. */
+  dotColor: THREE.Color;
+};
 
 /** Jari-jari bola. Seluruh angka lain di berkas ini kelipatannya. */
 const RADIUS = 1;
@@ -47,6 +60,52 @@ const SEGMENTS: [number, number] = [256, 128];
  * benar-benar terbaca sebagai tepi.
  */
 const RELIEF = 0.075;
+
+/**
+ * Tinggi permukaan daratan yang SEBENARNYA, satuan radius.
+ *
+ * `RELIEF` adalah batas atas, bukan tinggi yang dicapai: `displacementScale`
+ * mengalikan nilai peta, dan pedalaman benua di peta itu cuma sampai
+ * `LAND_COVERAGE`. Object yang ditempatkan pada `RELIEF` penuh berdiri di udara
+ * dengan celah yang terlihat di bawah alasnya.
+ */
+const LAND_RISE = RELIEF * LAND_COVERAGE;
+
+/**
+ * Sisi terpanjang sebuah object di atas bola, satuan radius.
+ *
+ * Skala sungguhan mustahil dan tidak diinginkan: Borobudur selebar 120 meter di
+ * atas bola berjari-jari 6.371 km adalah dua per seratus ribu radius, yaitu nol
+ * piksel. Yang dicari bukan skala melainkan KETERBACAAN — cukup besar untuk
+ * mengenali siluetnya, cukup kecil untuk lima belas sekaligus tidak saling
+ * menabrak di Eropa dan Asia Tenggara.
+ */
+const RELIC_SIZE = 0.1;
+
+/**
+ * Seberapa dalam alas object ditenggelamkan ke bawah permukaan, satuan radius.
+ *
+ * Alas sebuah model adalah bidang DATAR, sedangkan yang dipijaknya bola yang
+ * bergelombang. Diletakkan tepat di permukaan, bidang itu menyentuh tanah hanya
+ * di satu titik dan menggantung di atas sisanya — paling kelihatan di pulau
+ * kecil, tempat laut di sekelilingnya lebih rendah lagi dan candi terbaca
+ * seperti mengapung.
+ *
+ * Ditenggelamkan sedikit, tepi alasnya masuk ke dalam lereng dan objectnya
+ * terbaca tertanam. Angkanya jauh di bawah `LAND_RISE`, jadi ia tidak pernah
+ * tenggelam sampai ke bawah permukaan laut.
+ */
+const RELIC_SINK = 0.012;
+
+/** Sumbu tegak glTF. Dipakai menegakkan object pada normal permukaannya. */
+const MODEL_UP = new THREE.Vector3(0, 1, 0);
+
+/**
+ * Decoder Draco dari domain sendiri, bukan CDN Google yang jadi bawaan drei.
+ * Kelima belas proxy terkompresi Draco, jadi decoder ini syarat — bukan
+ * pelengkap. Alamat yang sama dipakai penampil warisan.
+ */
+const DRACO_PATH = "/draco/gltf/";
 
 /** Derajat per detik saat bola berputar bebas. */
 const SPIN_SPEED = 4.2;
@@ -129,17 +188,39 @@ function ReliefBody({
 
   const placed = useMemo(
     () =>
-      marks.map((m) => ({
-        ...m,
-        /* Sedikit di atas puncak relief, bukan di permukaan bola. Pada radius
-           telanjang penanda akan tenggelam ke dalam daratan yang baru saja
-           ditinggikan `displacementScale`. */
-        position: latLonToVector3(m.lat, m.lon, RADIUS + RELIEF + 0.006),
-        color: new THREE.Color().setRGB(
-          ...oklchToRgb(ACCENT.lightness, ACCENT.chroma, CONTINENT_INFO[m.continent].hue),
-          THREE.SRGBColorSpace,
-        ),
-      })),
+      marks.map((m) => {
+        /* Tepat di permukaan daratan, bukan di atas radius telanjang dan bukan
+           pada `RELIEF` penuh — lihat `LAND_RISE`. Object yang berdiri harus
+           menyentuh tanahnya; celah setipis apa pun di bawah alas langsung
+           terbaca sebagai benda yang melayang. */
+        const position = latLonToVector3(m.lat, m.lon, RADIUS + LAND_RISE - RELIC_SINK);
+        const normal = position.clone().normalize();
+
+        return {
+          ...m,
+          position,
+          normal,
+          /* Tegak terhadap permukaan di koordinatnya sendiri. Tidak ada satu pun
+             sudut yang ditulis tangan: normalnya berasal dari lintang dan bujur
+             yang sama dengan yang dipakai menempatkannya. */
+          quaternion: new THREE.Quaternion().setFromUnitVectors(MODEL_UP, normal),
+          /* Dua warna dari hue benua yang SAMA, dipakai di dua latar yang
+             berlawanan: object berdiri di atas bola yang gelap, penanda titik
+             cadangan tetap memakai pasangan lama. Lihat `RELIC_ACCENT`. */
+          color: new THREE.Color().setRGB(
+            ...oklchToRgb(
+              RELIC_ACCENT.lightness,
+              RELIC_ACCENT.chroma,
+              CONTINENT_INFO[m.continent].hue,
+            ),
+            THREE.SRGBColorSpace,
+          ),
+          dotColor: new THREE.Color().setRGB(
+            ...oklchToRgb(ACCENT.lightness, ACCENT.chroma, CONTINENT_INFO[m.continent].hue),
+            THREE.SRGBColorSpace,
+          ),
+        };
+      }),
     [marks],
   );
 
@@ -181,37 +262,38 @@ function ReliefBody({
         />
       </mesh>
 
-      {placed.map((mark) => (
-        <WorldMarker
-          key={mark.slug}
-          mark={mark}
-          dimmed={activeContinent !== null && activeContinent !== mark.continent}
-        />
-      ))}
+      {placed.map((mark) => {
+        const dimmed = activeContinent !== null && activeContinent !== mark.continent;
+
+        /* Satu batas Suspense PER object, bukan satu untuk kelima belasnya.
+           Satu batas bersama berarti bola berdiri kosong sampai proxy paling
+           lambat selesai; begini tiap warisan muncul begitu miliknya sendiri
+           mendarat. Fallback-nya `null` dan bukan penanda titik: berkedip dari
+           titik ke bangunan lebih mengganggu daripada muncul sekali. */
+        return mark.proxy ? (
+          <Suspense key={mark.slug} fallback={null}>
+            <WorldRelic mark={{ ...mark, proxy: mark.proxy }} dimmed={dimmed} />
+          </Suspense>
+        ) : (
+          <WorldMarker key={mark.slug} mark={mark} dimmed={dimmed} />
+        );
+      })}
     </group>
   );
 }
 
 /**
- * Satu penanda di atas relief.
+ * Mengecilkan sebuah node ke nol saat titiknya berputar ke sisi jauh bola.
  *
- * Sisi jauh disembunyikan lewat SKALA, bukan lewat `visible`. Mematikan
- * `visible` di tengah putaran menghasilkan kedipan tepat di tepi bola; mengecil
- * ke nol terbaca sebagai penanda yang tenggelam di balik lengkung bumi, yang
- * memang persis yang sedang terjadi.
+ * Sisi jauh disembunyikan lewat SKALA, bukan lewat `visible` maupun `opacity`.
+ * Mematikan `visible` di tengah putaran menghasilkan kedipan tepat di tepi bola;
+ * memudarkan berarti menulis ke material tiap frame, yang dilarang §8 di jalur
+ * panas — dan pada object bergeometri ia menambahkan penyortiran tembus pandang
+ * yang tidak dibutuhkan siapa pun. Mengecil ke nol terbaca sebagai benda yang
+ * tenggelam di balik lengkung bumi, yang memang persis yang sedang terjadi.
  */
-function WorldMarker({
-  mark,
-  dimmed,
-}: {
-  mark: WorldMark & { position: THREE.Vector3; color: THREE.Color };
-  dimmed: boolean;
-}) {
-  const ref = useRef<THREE.Mesh>(null);
-  const material = useRef<THREE.MeshBasicMaterial>(null);
+function useFacingScale(ref: React.RefObject<THREE.Object3D | null>, normal: THREE.Vector3) {
   const camera = useThree((state) => state.camera);
-
-  const normal = useMemo(() => mark.position.clone().normalize(), [mark.position]);
   const toCamera = useMemo(() => new THREE.Vector3(), []);
   const worldNormal = useMemo(() => new THREE.Vector3(), []);
   const worldPosition = useMemo(() => new THREE.Vector3(), []);
@@ -219,8 +301,7 @@ function WorldMarker({
 
   useFrame(() => {
     const node = ref.current;
-    const mat = material.current;
-    if (!node || !mat) return;
+    if (!node) return;
 
     const parent = node.parent;
     if (parent) parent.getWorldQuaternion(spin);
@@ -229,17 +310,115 @@ function WorldMarker({
     toCamera.copy(camera.position).sub(worldPosition).normalize();
 
     const facing = Math.max(0, worldNormal.dot(toCamera));
-    const eased = facing * facing * (3 - 2 * facing);
-
-    node.scale.setScalar(eased);
-    mat.opacity = dimmed ? 0.25 : 1;
+    node.scale.setScalar(facing * facing * (3 - 2 * facing));
   });
+}
+
+/**
+ * Penanda titik — jalur MUNDUR, bukan jalur utama.
+ *
+ * Dipakai hanya untuk warisan yang belum punya proxy. §1 menuntut nol asumsi
+ * asset: sebuah situs yang proxy-nya belum dibuat tetap berdiri di bolanya,
+ * sebagai titik, bukan menghilang dari dunia.
+ */
+function WorldMarker({ mark, dimmed }: { mark: PlacedMark; dimmed: boolean }) {
+  const ref = useRef<THREE.Mesh>(null);
+  useFacingScale(ref, mark.normal);
 
   return (
     <mesh ref={ref} position={mark.position}>
       <sphereGeometry args={[0.014, 12, 12]} />
-      <meshBasicMaterial ref={material} color={mark.color} transparent toneMapped={false} />
+      {/* Redup disetel lewat prop, bukan lewat useFrame: `dimmed` berubah saat
+          benua dipilih — sekali per klik, bukan enam puluh kali per detik. */}
+      <meshBasicMaterial
+        color={mark.dotColor}
+        transparent
+        opacity={dimmed ? 0.25 : 1}
+        toneMapped={false}
+      />
     </mesh>
+  );
+}
+
+/**
+ * Satu warisan BERDIRI di atas globe, bukan menandainya.
+ *
+ * Inilah koreksi yang diminta: Borobudur harus menonjol di Jawa sebagai bentuk,
+ * bukan sebagai titik di dekat Jawa. Yang membuatnya berdiri tegak adalah satu
+ * kuaternion — sumbu `+Y` glTF diputar ke normal permukaan di koordinatnya —
+ * dan karena normal itu dihitung dari koordinat aslinya, tidak ada satu pun
+ * angka penempatan yang ditulis tangan. Menambah warisan baru menempatkan
+ * objectnya sendiri (§2).
+ *
+ * **Model dikloning, materialnya diganti, geometrinya TIDAK PERNAH di-dispose.**
+ * `scene.clone(true)` menyalin hierarki tetapi tetap BERBAGI geometri dan
+ * material dengan scene yang di-cache `useGLTF`. Mem-`dispose()` geometri klon
+ * saat komponen dilepas berarti merusak cache global: pemasangan berikutnya
+ * mendapat geometri yang buffer GPU-nya sudah dibebaskan, dan objectnya lenyap
+ * tanpa satu pun pesan kesalahan. Yang dibuat sendiri di sini cuma materialnya,
+ * dan cuma itu yang dibersihkan.
+ */
+function WorldRelic({ mark, dimmed }: { mark: PlacedMark & { proxy: string }; dimmed: boolean }) {
+  /* Argumen ketiga `true` adalah meshopt, nilai bawaan drei. KTX2 tidak
+     dipasang: proxy dibuat tanpa satu tekstur pun — itu seluruh alasan ia
+     muat di 150 KB. */
+  const { scene } = useGLTF(mark.proxy, DRACO_PATH, true);
+  const ref = useRef<THREE.Group>(null);
+  useFacingScale(ref, mark.normal);
+
+  const relic = useMemo(() => {
+    const object = scene.clone(true);
+
+    /* Satu material untuk seluruh proxy, warna benua yang sama dengan daftar di
+       sebelahnya — bola dan daftar jadi satu sistem wayfinding. `roughness`
+       tinggi supaya ia menangkap cahaya menyapu yang sama dengan bolanya dan
+       terbaca sebagai batu, bukan sebagai stiker yang ditempel. */
+    const material = new THREE.MeshStandardMaterial({ roughness: 0.78, metalness: 0 });
+    object.traverse((child) => {
+      const mesh = child as THREE.Mesh;
+      if (mesh.isMesh) mesh.material = material;
+    });
+
+    /* Normalisasi: sisi terpanjang ke `RELIC_SIZE`, lalu alasnya diturunkan ke
+       nol dan pusatnya ditarik ke sumbu. Tanpa langkah kedua object tertanam
+       separuh di dalam bola atau melayang, tergantung di mana pembuatnya
+       kebetulan menaruh titik asal. */
+    object.position.set(0, 0, 0);
+    object.scale.setScalar(1);
+    object.updateMatrixWorld(true);
+
+    const raw = new THREE.Box3().setFromObject(object);
+    const size = raw.getSize(new THREE.Vector3());
+    const longest = Math.max(size.x, size.y, size.z);
+
+    if (Number.isFinite(longest) && longest > 0) {
+      object.scale.setScalar(RELIC_SIZE / longest);
+      object.updateMatrixWorld(true);
+      const fitted = new THREE.Box3().setFromObject(object);
+      const center = fitted.getCenter(new THREE.Vector3());
+      object.position.set(-center.x, -fitted.min.y, -center.z);
+    }
+
+    return { object, material };
+  }, [scene]);
+
+  /* Warna dan redupnya disetel di sini, bukan di `useMemo` di atas: keduanya
+     berubah saat benua dipilih, dan membangun ulang seluruh klon untuk
+     mengganti satu warna adalah pekerjaan yang tidak perlu dilakukan.
+
+     Redup lewat WARNA, bukan alfa. Object tembus pandang menuntut penyortiran
+     dan menembus satu sama lain di tepi bola; yang digelapkan tidak. */
+  useEffect(() => {
+    relic.material.color.copy(mark.color);
+    if (dimmed) relic.material.color.multiplyScalar(0.4);
+  }, [relic, mark.color, dimmed]);
+
+  useEffect(() => () => relic.material.dispose(), [relic]);
+
+  return (
+    <group ref={ref} position={mark.position} quaternion={mark.quaternion}>
+      <primitive object={relic.object} />
+    </group>
   );
 }
 

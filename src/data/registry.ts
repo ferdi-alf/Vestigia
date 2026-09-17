@@ -19,7 +19,19 @@ import type { Continent, Heritage, Locale } from "./types";
 export const HERITAGE: readonly Heritage[] = ASSET_MANIFEST.flatMap((asset) => {
   const meta = HERITAGE_META[asset.slug];
   if (!meta) return [];
-  return [{ ...meta, continent: asset.continent, modelPath: asset.modelPath, bytes: asset.bytes }];
+  return [
+    {
+      ...meta,
+      continent: asset.continent,
+      modelPath: asset.modelPath,
+      bytes: asset.bytes,
+      /* Ikut dibawa, dan `undefined` kalau `sync-heritage` belum pernah melihat
+         proxy-nya. Pemanggilnya yang memutuskan jatuh ke apa — §1, nol asumsi
+         asset. */
+      proxyPath: asset.proxyPath,
+      proxyBytes: asset.proxyBytes,
+    },
+  ];
 });
 
 const BY_SLUG = new Map(HERITAGE.map((h) => [h.slug, h]));

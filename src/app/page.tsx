@@ -41,6 +41,7 @@ export default function HomePage() {
     continent: h.continent,
     lat: h.coordinates[0],
     lon: h.coordinates[1],
+    proxy: h.proxyPath,
   }));
 
   const marks = points.map((p) => ({
@@ -48,6 +49,7 @@ export default function HomePage() {
     lat: p.lat,
     lon: p.lon,
     continent: p.continent,
+    proxy: p.proxy,
   }));
 
 
