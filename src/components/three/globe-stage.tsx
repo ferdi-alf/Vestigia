@@ -50,6 +50,34 @@ const GLOBE_RADIUS = 1;
 const RIGHT_BIAS = 0.32;
 
 /**
+ * Penempatan globe pada layar POTRET — setengah bola mengintip dari pojok.
+ *
+ * Bukan versi desktop yang dipangkas. `RIGHT_BIAS` sendirian adalah satu angka
+ * yang disetel pada layar lebar, dan pada viewport tinggi-sempit frustum
+ * mendatarnya menyempit sehingga pecahan yang sama mendorong bola jauh melewati
+ * tepi kanan — bolanya terpotong di tempat yang tidak dipilih siapa pun.
+ *
+ * Pemilik project memilih potongannya DISENGAJA: setengah bola yang mengintip
+ * dari tengah-bawah-kanan, dengan teks berdiri utuh di atas kirinya. Jadi
+ * biasnya diperbesar, ditambah bias turun, dan ketinggiannya diturunkan supaya
+ * yang terpotong adalah bola BESAR — bukan bola kecil yang kebetulan kena tepi.
+ *
+ * Dihitung dari RASIO ASPEK kanvas, bukan dari breakpoint. Aspek bereaksi pada
+ * rotasi layar dan pada tiap perubahan ukuran tanpa media query kedua yang
+ * harus dijaga tetap sinkron dengan yang ada di CSS.
+ */
+const PORTRAIT = {
+  /** Di bawah rasio ini penempatannya beralih penuh ke bentuk potret. */
+  until: 0.72,
+  /** Di atas rasio ini penempatannya sepenuhnya bentuk lanskap. */
+  from: 1.0,
+  right: 0.46,
+  down: 0.34,
+  /** Pengali ketinggian: lebih dekat berarti bola lebih besar. */
+  altitude: 0.72,
+};
+
+/**
  * Lebar jendela nyala/padam tiap penanda, dalam satuan progres keadaan.
  *
  * Di bawah 1 supaya penanda pertama dan terakhir tidak berbagi momen yang
@@ -323,13 +351,32 @@ function Marker({
  */
 function DiveRig({ progress }: { progress: React.RefObject<DiveProgress> }) {
   const camera = useThree((state) => state.camera);
+  const size = useThree((state) => state.size);
   const orbit = useMemo(() => new THREE.Vector3(), []);
   const origin = useMemo(() => new THREE.Vector3(), []);
+
+  /* Seberapa "potret" kanvasnya, 0..1. Dihitung saat ukuran berubah — bukan
+     tiap frame — karena `size` dari R3F sudah merupakan state yang diperbarui
+     oleh ResizeObserver miliknya sendiri.
+
+     Melandai di antara kedua batas alih-alih membalik pada satu nilai: tablet
+     yang diputar pelan-pelan melewati rasio 1 tidak boleh membuat globenya
+     melompat. */
+  const portrait = useMemo(() => {
+    const aspect = size.width / Math.max(1, size.height);
+    const k = (PORTRAIT.from - aspect) / (PORTRAIT.from - PORTRAIT.until);
+    const clamped = Math.min(1, Math.max(0, k));
+    return clamped * clamped * (3 - 2 * clamped);
+  }, [size.width, size.height]);
 
   useFrame(() => {
     const t = progress.current?.value ?? 0;
 
-    latLonInto(orbit, VIEWPOINT.lat, VIEWPOINT.lon, GLOBE_RADIUS * altitudeAt(t));
+    /* Ketinggian dikalikan, bukan diganti: seluruh bentuk kurva `altitudeAt`
+       — termasuk penembusan di ujungnya — tetap berlaku di ponsel, hanya
+       seluruhnya lebih dekat. */
+    const lift = 1 - portrait * (1 - PORTRAIT.altitude);
+    latLonInto(orbit, VIEWPOINT.lat, VIEWPOINT.lon, GLOBE_RADIUS * altitudeAt(t) * lift);
     camera.position.copy(orbit);
     camera.lookAt(origin);
 
@@ -348,8 +395,16 @@ function DiveRig({ progress }: { progress: React.RefObject<DiveProgress> }) {
        Berlaku PENUH sejak progres nol. Versi sebelumnya menumbuhkannya di
        tengah jalan karena globe di sana lahir di tengah bingkai; sekarang ia
        sudah di kanan sejak piksel pertama, dan kolom kiri memang sudah berisi
-       teks yang menuntutnya. */
-    camera.translateX(-orbit.length() * RIGHT_BIAS);
+       teks yang menuntutnya.
+
+       Pada layar potret biasnya membesar dan ditemani bias TURUN, sehingga
+       yang tersisa di bingkai adalah kuadran kiri-atas bola — setengah bola
+       yang mengintip dari tengah-bawah-kanan. `translateY` negatif menurunkan
+       kameranya, yang menaikkan bolanya; yang dipakai di sini positif supaya
+       bolanya justru turun. */
+    const reach = orbit.length();
+    camera.translateX(-reach * (RIGHT_BIAS + portrait * (PORTRAIT.right - RIGHT_BIAS)));
+    if (portrait > 0) camera.translateY(reach * portrait * PORTRAIT.down);
   });
 
   return null;

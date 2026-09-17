@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import type { Heritage } from "@/data/types";
 import type { DiveProgress, GlobeMark } from "@/components/three/globe-stage";
 import { CONCEPT_MEDIA } from "@/data/landing-media";
@@ -11,7 +11,6 @@ import { buttonClass } from "@/components/ui/button";
 import { useI18n } from "@/lib/i18n/client";
 import { useInView } from "@/lib/motion/use-in-view";
 import { useStillPreference } from "@/lib/motion/use-still-preference";
-import { MetadataChip } from "@/concepts/shell/metadata-chip";
 import { StrataField } from "@/concepts/shell/strata-field";
 import { A_COPY } from "./copy";
 import { useDiveFilm } from "./use-dive-film";
@@ -72,6 +71,11 @@ export function Dive({ heritage, marks }: { heritage: Heritage; marks: GlobeMark
   const root = useRef<HTMLElement>(null);
   const stage = useRef<HTMLDivElement>(null);
   const progress = useRef<DiveProgress>({ value: 0, intro: 0 });
+
+  /* Dihitung dari penanda yang sama yang berdiri di globe, bukan dari daftar
+     benua — supaya angkanya menyebut apa yang BENAR-BENAR ada di koleksi, bukan
+     apa yang secara teori mungkin ada. */
+  const continents = useMemo(() => new Set(marks.map((m) => m.continent)).size, [marks]);
   const [gateRef, { active, entered, visible }] = useInView<HTMLDivElement>({ rootMargin: "200px" });
   const still = useStillPreference();
 
@@ -186,13 +190,30 @@ export function Dive({ heritage, marks }: { heritage: Heritage; marks: GlobeMark
               {A_COPY.heroLead[locale]}
             </p>
 
-            {/* Kepadatan yang menyebutkan sesuatu. Ketiganya dibaca dari
-                koleksi, jadi mereka informasi — bukan bentuk yang mengisi
-                ruang kosong. */}
-            <div className="mt-8 flex flex-wrap gap-2">
-              <MetadataChip data-dive-chip label={A_COPY.chipSites[locale]} value={String(marks.length)} tone="mark" />
-              <MetadataChip data-dive-chip label={A_COPY.chipContinents[locale]} value="5" tone="mark" />
-              <MetadataChip data-dive-chip label={A_COPY.chipFormat[locale]} value={A_COPY.chipFormatValue[locale]} />
+            {/* Kepadatan yang menyebutkan sesuatu — dan sekarang benar-benar
+                ketiganya dibaca dari koleksi.
+
+                Jumlah benua sebelumnya ditulis tangan sebagai `"5"` tepat di
+                bawah komentar yang mengklaim ketiganya dihitung. Ia kini
+                diturunkan dari `marks` yang sama, jadi menambah satu warisan di
+                benua keenam mengubah angka ini tanpa menyentuh satu baris pun.
+
+                Tanpa kartu. Versi sebelumnya membungkus ketiganya dalam
+                `MetadataChip` — latar, tepi terukir, bayangan dalam — tiga
+                kotak bersaing tepat di bawah judul yang seharusnya jadi titik
+                fokus tunggal. Yang tersisa cuma angka dan labelnya, dipisah
+                satu garis rambut. */}
+            <div className="mt-9 flex flex-wrap items-start gap-x-6 gap-y-5 sm:gap-x-8">
+              <HeroStat value={marks.length} label={A_COPY.chipSites[locale]} />
+              <HeroStat value={continents} label={A_COPY.chipContinents[locale]} divided />
+              <div data-dive-chip className="border-l border-line pl-6 sm:pl-8">
+                <p className="font-display text-xl leading-none text-ink-soft sm:text-2xl">
+                  {A_COPY.chipFormatValue[locale]}
+                </p>
+                <p className="mt-2.5 text-[0.58rem] leading-none tracking-[0.18em] text-ink-dim uppercase">
+                  {A_COPY.chipFormat[locale]}
+                </p>
+              </div>
             </div>
 
             {/* SATU ajakan, dan ia menuju object 3D-nya sendiri. */}
@@ -231,5 +252,39 @@ export function Dive({ heritage, marks }: { heritage: Heritage; marks: GlobeMark
         </p>
       </div>
     </section>
+  );
+}
+
+/**
+ * Satu angka besar dengan labelnya, tanpa kotak.
+ *
+ * `tabular-nums` bukan kosmetik: angkanya dihitung naik dari nol saat masuk,
+ * dan digit berlebar-beda membuat seluruh baris bergoyang di tiap langkah
+ * cacahan.
+ *
+ * Nilai benarnya dirender server sebagai teks sungguhan DAN disimpan di
+ * `data-count`. Filmlah yang menimpa `textContent` tiap frame, jadi nilai
+ * benarnya harus tinggal di tempat yang tidak ikut tertimpa — dan karena
+ * teksnya nyata sejak HTML pertama, tanpa JavaScript, pada pembaca layar, dan
+ * pada Ctrl+F angkanya tetap benar.
+ */
+function HeroStat({
+  value,
+  label,
+  divided = false,
+}: {
+  value: number;
+  label: string;
+  divided?: boolean;
+}) {
+  return (
+    <div data-dive-chip className={divided ? "border-l border-line pl-6 sm:pl-8" : undefined}>
+      <p className="font-display text-4xl leading-none text-ink tabular-nums sm:text-5xl">
+        <span data-count={value}>{value}</span>
+      </p>
+      <p className="mt-2.5 text-[0.58rem] leading-none tracking-[0.18em] text-ink-dim uppercase">
+        {label}
+      </p>
+    </div>
   );
 }

@@ -115,13 +115,51 @@ export function useDiveFilm(
         onUpdate: () => publish({ intro: intro.v }),
       });
 
-      gsap
+      const welcome = gsap
         .timeline({ defaults: { ease: EASE.enter } })
         .from("[data-reveal-line] > *", { yPercent: 108, duration: 1.1, stagger: 0.08 })
         .from("[data-dive-lead]", { autoAlpha: 0, y: 16, duration: 0.8 }, "-=0.8")
-        .from("[data-dive-chip]", { autoAlpha: 0, y: 10, duration: 0.5, stagger: 0.07 }, "-=0.55")
+        .addLabel("angka", "-=0.55")
+        .from("[data-dive-chip]", { autoAlpha: 0, y: 10, duration: 0.5, stagger: 0.07 }, "angka")
         .from("[data-dive-action]", { autoAlpha: 0, y: 12, duration: 0.6, stagger: 0.08 }, "-=0.45")
         .from(hint, { autoAlpha: 0, duration: 0.6 }, "-=0.3");
+
+      /* Angka mengendap bersama barisnya.
+
+         Mekanismenya sudah ditulis di project ini untuk hero konsep B; yang
+         diambil polanya, bukan hooknya — hook itu terikat pada peta beat milik
+         hero yang lain. Bedanya di sini ia digantung pada timeline BERBASIS
+         WAKTU, bukan yang ter-scrub: mencacah adalah bagian dari sambutan, dan
+         sambutan terjadi justru ketika belum ada yang digulir.
+
+         Nilai benarnya dibaca dari `data-count`, TIDAK PERNAH dari
+         `textContent` — `textContent` adalah yang ditimpa tiap frame, jadi
+         membacanya dari sana berarti mencacah menuju angka yang sedang berubah.
+
+         `fromTo`, bukan `to`: ia merender keadaan awalnya seketika saat
+         timeline dirakit, jadi nolnya sudah terpasang sebelum satu bingkai pun
+         terlihat. Dengan `to` saja, angka benar hasil render server akan
+         terlihat sekejap lalu melompat ke nol. */
+      for (const el of q<HTMLElement>("[data-count]")) {
+        const target = Number(el.dataset.count);
+        if (!Number.isFinite(target)) continue;
+
+        const tally = { n: 0 };
+        welcome.fromTo(
+          tally,
+          { n: 0 },
+          {
+            n: target,
+            duration: 1.1,
+            ease: EASE.enter,
+            snap: { n: 1 },
+            onUpdate: () => {
+              el.textContent = String(Math.round(tally.n));
+            },
+          },
+          "angka",
+        );
+      }
 
       /* Keadaan awal dipasang GSAP, tidak pernah CSS. Tanpa JavaScript blok
          teksnya tetap terbaca alih-alih hilang sama sekali. */
