@@ -8,7 +8,7 @@ import type { Continent } from "@/data/types";
 import { CONTINENT_INFO } from "@/data/continents";
 import { latLonToVector3 } from "@/lib/geo";
 import { createReliefMaps } from "@/lib/three/relief-texture";
-import { readTokens } from "@/lib/three/globe-texture";
+import { readTokens } from "@/lib/read-tokens";
 import { ACCENT, oklchToRgb } from "@/lib/three/oklch";
 import { EASE, gsap } from "@/lib/motion/use-scroll-scene";
 

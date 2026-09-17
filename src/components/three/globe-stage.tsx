@@ -6,7 +6,8 @@ import { Environment, Lightformer } from "@react-three/drei";
 import * as THREE from "three";
 import { CONTINENT_INFO } from "@/data/continents";
 import { latLonInto, latLonToVector3 } from "@/lib/geo";
-import { createGlobeMaps, readTokens } from "@/lib/three/globe-texture";
+import { createGlobeMaps } from "@/lib/three/globe-texture";
+import { readTokens } from "@/lib/read-tokens";
 import { ACCENT, oklchToRgb } from "@/lib/three/oklch";
 import {
   ENTER_FADE_FROM,

@@ -12,6 +12,7 @@ import { useI18n } from "@/lib/i18n/client";
 import { useInView } from "@/lib/motion/use-in-view";
 import { useStillPreference } from "@/lib/motion/use-still-preference";
 import { MetadataChip } from "@/concepts/shell/metadata-chip";
+import { StrataField } from "@/concepts/shell/strata-field";
 import { A_COPY } from "./copy";
 import { useDiveFilm } from "./use-dive-film";
 
@@ -38,11 +39,16 @@ const DUST = slot("a-dust");
  * berdiri di atas kertas sejak bingkai pertama, bukan di atas klip gelap).
  * Transfer halaman ini turun sekitar 8 MB karenanya.
  *
- * **Urutan lapisan tinggal tiga, dan urutannya syarat:**
+ * **Urutan lapisan, dan urutannya syarat:**
  *
- *     z-[1]  kanvas 3D   globe, satu-satunya subjek
- *     z-[2]  debu        di DEPAN subjek; debu di belakang subjek cuma tekstur
+ *     z-0    lapisan      medan strata, kanvas 2D; paling belakang
+ *     z-[1]  kanvas 3D    globe, satu-satunya subjek
+ *     z-[2]  debu         di DEPAN subjek; debu di belakang subjek cuma tekstur
  *     z-10   teks
+ *
+ * Latar strata berbagi gerbang `useInView` yang sama dengan globe alih-alih
+ * memasang pengamatnya sendiri. Satu section, satu pengamat: dua yang mengawasi
+ * kotak yang sama akan bisa berselisih pendapat tentang kapan ia terlihat.
  *
  * Tinggi section dan `sticky` adalah PASANGAN, tetapi BUKAN pasangan satu-satu.
  * ScrollTrigger di `use-dive-film` berjalan dari `top top` ke `bottom top` —
@@ -95,6 +101,10 @@ export function Dive({ heritage, marks }: { heritage: Heritage; marks: GlobeMark
         ref={stage}
         className="sticky top-0 flex h-svh items-center overflow-hidden motion-reduce:static motion-reduce:h-auto motion-reduce:py-28"
       >
+        {/* z-0 · medan strata. Kanvas 2D, bukan konteks WebGL kedua — §7
+            melarang yang kedua, dan hero sudah memakai jatahnya untuk globe. */}
+        <StrataField active={active} still={still} />
+
         {/* z-[1] · panggung 3D — satu-satunya subjek section ini.
 
             `active` mematikan loop render saat kanvas keluar layar atau tab

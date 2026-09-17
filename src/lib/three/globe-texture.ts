@@ -214,22 +214,3 @@ export function createGlobeMaps(colors: GlobeTextureColors): GlobeMaps | null {
 
   return { map: finish(canvases.albedo, true), bumpMap: finish(canvases.relief, false) };
 }
-
-/**
- * Baca warna dari token yang sedang berlaku pada sebuah elemen.
- *
- * Kanvas tidak mengerti `var(--color-land)`, jadi nilainya harus diselesaikan
- * lebih dulu. Dibaca dari elemen — bukan dari `:root` — supaya ia mengambil
- * palet yang membungkusnya.
- */
-export function readTokens<K extends string>(
-  element: Element,
-  names: Record<K, string>,
-): Record<K, string> {
-  const style = getComputedStyle(element);
-  const out = {} as Record<K, string>;
-  for (const key of Object.keys(names) as K[]) {
-    out[key] = style.getPropertyValue(names[key]).trim();
-  }
-  return out;
-}
