@@ -48,8 +48,18 @@ const MODELS_DIR = path.join(ROOT, "public", "models");
 const OUT_DIR = path.join(ROOT, "public", "images", "thumbs");
 const MANIFEST = path.join(ROOT, "src", "data", "generated", "thumb-manifest.ts");
 
-/** Sisi gambar akhir, piksel. */
-const SIZE = 128;
+/**
+ * Sisi gambar akhir, piksel.
+ *
+ * 256, bukan 128, dan angkanya datang dari tempat gambarnya dipakai. Rail
+ * koleksi merendernya 44 px, tetapi varian `strip` merendernya **120 px** — dan
+ * pada layar ber-DPR 2 itu menuntut 240 piksel sumber. Pada 128 ia diperbesar
+ * hampir dua kali dan tepinya pecah; itu keluhan yang bisa diukur, bukan selera.
+ *
+ * Ongkosnya kecil: gambarnya siluet datar berlatar polos, jadi PNG-nya tetap
+ * puluhan kilobyte meski pikselnya empat kali lipat.
+ */
+const SIZE = 256;
 
 /**
  * Pengali supersampling.
@@ -61,8 +71,33 @@ const SIZE = 128;
  */
 const SS = 2;
 
-/** Berapa bagian bingkai yang boleh diisi object. Sisanya udara. */
-const FIT = 0.86;
+/**
+ * Dua ambang pembingkaian, dan kenapa satu saja tidak cukup.
+ *
+ * Versi pertama memakai satu angka: sisi terpanjang object dipaskan ke 86%
+ * bingkai. Terdengar seragam, ternyata tidak — karena yang dilihat mata bukan
+ * sisi terpanjang melainkan **luas**.
+ *
+ * Terukur pada koleksi ini: object bujur sangkar yang sisi panjangnya 86%
+ * bingkai terbaca sebesar 86%; object pipih berbanding 3:1 dengan sisi panjang
+ * yang sama hanya mengisi 29% tingginya, dan terbaca `sqrt(0,86 x 0,29) = 50%`.
+ * Selisihnya 73% — itu sebabnya Borobudur dan Angkor Wat yang melebar terlihat
+ * kerdil di sebelah Tentara Terakota yang menjulang, walau keduanya "dipaskan".
+ *
+ * Jadi skalanya sekarang dihitung dari rata-rata geometrik sisi-sisinya —
+ * ukuran yang sebanding dengan akar luas — lalu DIBATASI supaya tidak ada yang
+ * keluar bingkai:
+ *
+ *   FIT_AREA  target ukuran terbaca, dipakai kalau muat
+ *   FIT_MAX   batas keras sisi terpanjang; ia yang menang pada bentuk ekstrem
+ *
+ * Konsekuensinya object bujur sangkar jadi sedikit lebih kecil daripada
+ * sebelumnya, dan itu memang harganya: yang dikejar keseragaman antar baris,
+ * bukan bingkai yang penuh satu per satu. Selisih terbacanya turun dari 73%
+ * ke sekitar 19%.
+ */
+const FIT_AREA = 0.66;
+const FIT_MAX = 0.92;
 
 /**
  * Perbesaran per situs, dan kenapa ini DATA alih-alih heuristik.
@@ -88,10 +123,18 @@ const FIT = 0.86;
  * kebetulan cocok pada hari ini.
  *
  * Slug yang tidak terdaftar memakai 1 — memuat seluruh kotak batasnya.
+ *
+ * **Sesudah pembingkaian berbasis luas, daftar ini menyusut jadi dua — dan dua
+ * itu tidak bisa ikut diselesaikan aturan mana pun.** Tiga belas model lainnya
+ * kini mendarat di 62–66% ukuran terbaca tanpa satu pun angka yang ditulis
+ * tangan. Yang tersisa adalah dua pemindaian yang kotak batasnya BUKAN
+ * monumennya melainkan tanahnya: dipaskan apa adanya, lingkaran batu Stonehenge
+ * tinggal setitik di tengah pelat kosong. Untuk keduanya bingkainya sengaja
+ * memangkas tanah hasil pindaian, dan itu memang yang harus dipangkas.
  */
 const ZOOM = {
-  stonehenge: 5.0,
-  colosseum: 2.8,
+  stonehenge: 4.2,
+  colosseum: 2.0,
 };
 
 /**
@@ -263,10 +306,17 @@ function render(tris, zoom) {
     flat.push(tri);
   }
 
-  const spread = Math.max(maxX - minX, maxY - minY);
-  if (!Number.isFinite(spread) || spread <= 0) return null;
+  const w = maxX - minX;
+  const h = maxY - minY;
+  if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) return null;
 
-  const scale = ((dim * FIT) / spread) * zoom;
+  /* Ukuran yang dikejar diambil dari rata-rata geometrik — sebanding dengan akar
+     luas, jadi itu yang terbaca mata sebagai "sebesar apa". Batas sisi terpanjang
+     menahannya supaya bentuk yang sangat pipih atau sangat menjulang tidak
+     tumpah keluar bingkai; pada bentuk seperti itu batas inilah yang menang. */
+  const byArea = (dim * FIT_AREA) / Math.sqrt(w * h);
+  const byLongest = (dim * FIT_MAX) / Math.max(w, h);
+  const scale = Math.min(byArea, byLongest) * zoom;
   const cx = (minX + maxX) / 2;
   const cy = (minY + maxY) / 2;
 
