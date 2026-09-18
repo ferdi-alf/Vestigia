@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="Vestigia">
+  <title>Vestigia</title>
+  <!--
+    Lambang yang sama dengan `src/components/shell/brand-mark.tsx`: lingkaran
+    dengan empat tanda bidik, motif `coordinate-mark`.
+
+    Warnanya DITULIS, bukan currentColor dan bukan variabel token. Favicon
+    dirender di luar dokumen: tidak ada :root yang bisa dibacanya, dan sebuah
+    variabel token di sini akan jatuh ke hitam.
+
+    Lempengnya EMAS dan tandanya kertas, kebalikan dari yang di navbar. Di 16
+    piksel sebuah tanda tipis di atas lempeng nyaris putih hilang di bilah tab
+    yang juga terang; lempeng pekat dengan tanda terang terbaca di bilah terang
+    maupun gelap. Di navbar persoalannya tidak ada, karena di sana ia berdiri di
+    atas kertas yang sudah pasti.
+  -->
+  <rect width="32" height="32" rx="7" fill="#7d631a" />
+  <g fill="none" stroke="#faf7f0" stroke-width="2.2" stroke-linecap="round">
+    <circle cx="16" cy="16" r="6.4" />
+    <path d="M16 4v3.6M16 24.4V28M4 16h3.6M24.4 16H28" />
+  </g>
+</svg>

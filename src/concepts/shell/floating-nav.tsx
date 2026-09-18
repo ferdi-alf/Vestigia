@@ -6,6 +6,7 @@ import { useI18n } from "@/lib/i18n/client";
 import { cn } from "@/lib/cn";
 import { buttonClass } from "@/components/ui/button";
 import { LanguageToggle } from "@/components/shell/language-toggle";
+import { BrandMark } from "@/components/shell/brand-mark";
 
 /** Seberapa jauh halaman digulir sebelum navbar memadat. */
 const SOLID_AFTER = 60;
@@ -233,25 +234,23 @@ export function FloatingNav({
  *
  * Tanda koordinat di kiri nama adalah motif `coordinate-mark` yang sama dengan
  * penanda di peta — ia membuat namanya terbaca sebagai entri survei alih-alih
- * logo startup. Bentuknya berubah per konsep: garis tegak yang memanjang di A,
- * aturan cetak di bawah nama pada B, dan silang bidik pada C.
+ * logo startup. A dan C memakai lambang yang sama (`BrandMark`); B memakai
+ * aturan cetak di bawah nama dan sengaja tidak membawa lambang sama sekali.
  */
 function Brand({ variant, label }: { variant: NavVariant; label: string }) {
   return (
     <Link href="/" className="group flex shrink-0 items-center gap-2.5">
-      {variant === "a" ? (
-        <span
-          aria-hidden="true"
-          className="h-4 w-px bg-gold transition-transform duration-500 group-hover:scale-y-150"
-        />
-      ) : null}
+      {/* Lambang berdiri di kiri nama pada konsep A dan C.
 
-      {variant === "c" ? (
-        <svg viewBox="0 0 16 16" className="h-4 w-4 text-gold" aria-hidden="true" fill="none" stroke="currentColor">
-          <circle cx="8" cy="8" r="3.4" strokeWidth="1.2" />
-          <path d="M8 0v3M8 13v3M0 8h3M13 8h3" strokeWidth="1.2" strokeLinecap="round" />
-        </svg>
-      ) : null}
+          Pada A ia MENGGANTIKAN batang emas tipis yang dulu berdiri di sana.
+          Batang itu tanda baca, bukan lambang: ia memisahkan tanpa menyebut
+          apa-apa, dan situs ini tidak punya satu pun bentuk yang bisa dikenali
+          di luar tulisan namanya — termasuk di bilah tab.
+
+          B sengaja tetap tanpa lambang. Pakaiannya aturan cetak: nama dengan
+          garis di bawahnya, dan sebuah tanda di kirinya akan jadi hal kedua
+          yang bersaing pada lockup yang seluruh maksudnya satu hal. */}
+      {variant === "a" || variant === "c" ? <BrandMark className="text-gold" /> : null}
 
       <span className="flex flex-col">
         <span

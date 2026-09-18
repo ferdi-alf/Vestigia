@@ -14,6 +14,7 @@
     "make:proxies": "node scripts/make-proxies.mjs",
     "make:thumbs": "node scripts/make-thumbs.mjs",
     "check:hotspots": "node scripts/check-hotspots.mjs",
+    "import:images": "node scripts/import-heritage-images.mjs",
     "encode:video": "node scripts/encode-video.mjs"
   },
   "dependencies": {
