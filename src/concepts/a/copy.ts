@@ -63,10 +63,15 @@ export const A_COPY = {
      sekaligus. Yang dulu butuh empat section — peta, tanya jawab, lima pintu,
      dan ajakan penutup — di sini jadi satu benda yang bisa diputar dan
      diklik. */
-  worldKicker: { id: "Yang tersisa", en: "What remains" },
+  /* Kicker dan judul ini pernah berbunyi "Yang tersisa" dan "lima belas yang
+     bertahan" — dan keduanya mengklaim lebih daripada yang bisa dipertanggung-
+     jawabkan: seolah lima belas inilah yang selamat dari seluruh warisan dunia.
+     Koleksi ini sebuah pilihan, bukan sebuah sisa. Teksnya sekarang menyebut
+     dirinya apa adanya: lima belas pintu masuk yang bisa dibuka di sini. */
+  worldKicker: { id: "Yang bisa dibuka", en: "What you can open" },
   worldTitle: {
-    id: "Lima benua, lima belas yang bertahan.",
-    en: "Five continents, fifteen that endured.",
+    id: "Lima benua, lima belas pintu masuk.",
+    en: "Five continents, fifteen ways in.",
   },
   worldLead: {
     id: "Setiap object di bola ini berdiri pada koordinat aslinya, dan setiap satunya punya model 3D yang bisa dibuka. Pilih satu benua untuk memutar dunia ke sana.",

@@ -51,8 +51,7 @@ next-env.d.ts
 .env*.local
 
 # Perkakas penulis, bukan bagian dari produk.
-# Di dalam .claude/skills ada dua repository git bersarang dengan remote publik
-# (web-design-studio dan gsap-skills). Kalau folder ini ikut ter-commit, jejak
-# asal itu ikut terbawa dan ukuran repo bertambah 12 MB tanpa satu pun baris
-# yang dipakai aplikasi. Skill tetap berfungsi penuh secara lokal.
+# Folder ini memuat repository git bersarang dan sekitar 12 MB berkas yang tidak
+# dipakai satu baris pun oleh aplikasi. Membiarkannya ter-commit hanya
+# menggemukkan repo. Perkakasnya tetap berfungsi penuh secara lokal.
 /.claude/

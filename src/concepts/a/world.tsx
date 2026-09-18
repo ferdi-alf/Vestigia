@@ -21,7 +21,7 @@ const WorldGlobe = dynamic(
 );
 
 /**
- * Dunia — lima benua, lima belas yang bertahan.
+ * Dunia — lima benua, lima belas pintu masuk.
  *
  * Section ini menggantikan EMPAT section sekaligus: Penjelajah (peta datar),
  * Pemandu Budaya, Pintu Masuk (lima kartu benua), dan Penutup. Yang dulu butuh
