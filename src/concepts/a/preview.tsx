@@ -6,6 +6,7 @@ import SpotlightCard from "@/components/SpotlightCard";
 import { BeamField, type BeamLink } from "@/concepts/shell/beam";
 import { useI18n } from "@/lib/i18n/client";
 import { useMotionTier } from "@/lib/motion/use-motion-tier";
+import { useMediaQuery } from "@/lib/motion/use-media-query";
 import { EASE, gsap, useScrollScene } from "@/lib/motion/use-scroll-scene";
 import { A_COPY } from "./copy";
 
@@ -99,6 +100,37 @@ const LINKS: BeamLink[] = [
   delay: index * 0.22,
 }));
 
+/**
+ * Versi ponsel: empat penunjuk LURUS, dua turun dan dua naik.
+ *
+ * Di lebar ponsel bingkainya selebar layar, jadi tidak ada tepi luar untuk
+ * dibeloki siku — alasan yang sama persis dengan section "Yang Hilang". Yang
+ * berubah bukan cuma bentuk garisnya melainkan SUSUNAN labelnya: dua label
+ * pindah ke atas bingkai dan dua ke bawahnya, masing-masing bertetangga
+ * langsung dengan tepi yang ditunjuknya.
+ *
+ * Susunan itu yang membuat keempat garis bisa hidup bersamaan. Menumpuk
+ * keempat label di satu sisi — susunan yang lama — memaksa garis dari label
+ * terjauh melintasi label-label di depannya, dan garis yang melintasi teks
+ * dilarang aturan beam project ini. Dengan dua di atas dan dua di bawah, tiap
+ * garis hanya pernah menyeberangi ruang kosong.
+ */
+/**
+ * Ambang TATA LETAK, bukan ambang gerak — alasan yang sama dengan section
+ * "Yang Hilang": label baru ditempatkan absolut pada `lg:`, sementara
+ * `useMotionTier` berganti tingkat pada 768px. Di antara keduanya, siku yang
+ * dihitung untuk susunan absolut digambar ke label yang masih bertumpuk dalam
+ * kolom.
+ */
+const WIDE = "(min-width: 1024px)";
+
+const LINKS_COMPACT: BeamLink[] = ["benua", "pemandu", "koleksi", "kuis"].map((id, index) => ({
+  from: `pv-label-${id}`,
+  to: "pv-frame",
+  curvature: 0,
+  delay: index * 0.18,
+}));
+
 function Label({
   id,
   title,
@@ -132,6 +164,7 @@ export function Preview() {
   const scope = useRef<HTMLDivElement>(null);
   const [built, setBuilt] = useState(false);
   const tier = useMotionTier();
+  const wide = useMediaQuery(WIDE);
 
   useScrollScene(
     ({ still }, node) => {
@@ -198,9 +231,19 @@ export function Preview() {
             aliran normal dan garisnya memang tidak digambar. */}
         <div
           ref={scope}
-          className="relative mt-12 lg:flex lg:min-h-[32rem] lg:items-center lg:justify-center"
+          /* Di ponsel sebuah KOLOM: label, bingkai, label. Dari `lg` ke atas ia
+             kembali jadi panggung yang memusatkan bingkainya, dan labelnya
+             ditempatkan absolut terhadap kotak ini. */
+          className="relative mt-12 flex flex-col gap-10 lg:mt-12 lg:min-h-[32rem] lg:flex-row lg:items-center lg:justify-center lg:gap-0"
         >
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:mt-0 lg:block">
+          {/* Dua label DI ATAS bingkai, dan dua lagi di bawahnya — lihat
+              `LINKS_COMPACT`. `lg:contents` melarutkan kedua pembungkus ini pada
+              layar lebar, sehingga keempat label kembali jadi anak langsung
+              `scope` dan penempatan absolutnya mengukur terhadap kotak yang
+              benar. Pembungkusnya sendiri tidak pernah diukur beam, jadi
+              `display: contents` di sini aman — yang dilarang adalah menaruhnya
+              pada elemen yang MENJADI ujung garis. */}
+          <div className="grid grid-cols-2 gap-3 lg:contents">
             <Label
               id="benua"
               title={A_COPY.previewBenuaLabel[locale]}
@@ -208,22 +251,10 @@ export function Preview() {
               className="lg:absolute lg:top-[2%] lg:left-0 lg:w-[21%]"
             />
             <Label
-              id="koleksi"
-              title={A_COPY.previewKoleksiLabel[locale]}
-              body={A_COPY.previewKoleksiBody[locale]}
-              className="lg:absolute lg:top-[58%] lg:left-0 lg:w-[21%]"
-            />
-            <Label
               id="pemandu"
               title={A_COPY.previewPemanduLabel[locale]}
               body={A_COPY.previewPemanduBody[locale]}
               className="lg:absolute lg:top-[10%] lg:right-0 lg:w-[21%]"
-            />
-            <Label
-              id="kuis"
-              title={A_COPY.previewKuisLabel[locale]}
-              body={A_COPY.previewKuisBody[locale]}
-              className="lg:absolute lg:top-[70%] lg:right-0 lg:w-[21%]"
             />
           </div>
 
@@ -265,14 +296,34 @@ export function Preview() {
             </div>
           </div>
 
-          {/* Garis hanya dari `lg` ke atas.
+          <div className="grid grid-cols-2 gap-3 lg:contents">
+            <Label
+              id="koleksi"
+              title={A_COPY.previewKoleksiLabel[locale]}
+              body={A_COPY.previewKoleksiBody[locale]}
+              className="lg:absolute lg:top-[58%] lg:left-0 lg:w-[21%]"
+            />
+            <Label
+              id="kuis"
+              title={A_COPY.previewKuisLabel[locale]}
+              body={A_COPY.previewKuisBody[locale]}
+              className="lg:absolute lg:top-[70%] lg:right-0 lg:w-[21%]"
+            />
+          </div>
 
-              Di bawah itu label dan bingkainya bertumpuk dalam satu kolom, dan
-              siku 90 derajat di antara mereka akan melintasi teks — yang
-              dilarang aturan beam project ini. Hubungannya tetap tersampaikan di
-              sana lewat nomor yang sama di penanda dan di labelnya. */}
-          {built && tier === "full" ? (
-            <BeamField container={scope} links={LINKS} className="z-[1] text-gold" />
+          {/* Garis digambar di KEDUA lebar, dengan geometri yang berbeda —
+              siku dari `lg:` ke atas, penunjuk lurus di bawahnya. Lihat
+              `LINKS_COMPACT` dan `WIDE`.
+
+              `still` tetap tidak menggambar apa pun: di sana tidak ada urutan
+              perakitan untuk diikuti garisnya. Hubungannya tetap tersampaikan
+              lewat kedekatan label dengan bingkainya. */}
+          {built && tier !== "still" ? (
+            <BeamField
+              container={scope}
+              links={wide ? LINKS : LINKS_COMPACT}
+              className="z-[1] text-gold"
+            />
           ) : null}
         </div>
       </div>

@@ -9,6 +9,8 @@ import { useStillPreference } from "@/lib/motion/use-still-preference";
 import { buttonClass } from "@/components/ui/button";
 import { useI18n } from "@/lib/i18n/client";
 import { useMotionTier } from "@/lib/motion/use-motion-tier";
+import { useMediaQuery } from "@/lib/motion/use-media-query";
+import { cn } from "@/lib/cn";
 import { EASE, ScrollTrigger, gsap, useScrollScene } from "@/lib/motion/use-scroll-scene";
 import { setNavOpened } from "@/lib/motion/nav-shell";
 import { BeamField, type BeamLink } from "@/concepts/shell/beam";
@@ -78,6 +80,73 @@ const ELBOWS: BeamLink[] = [
 ];
 
 /**
+ * Versi ponsel: tiga penunjuk LURUS, bukan siku.
+ *
+ * **Sikunya dibuang karena di lebar ponsel ia berhenti punya arti, bukan karena
+ * ia tidak muat.** Sebuah siku 90 derajat mengatakan "berangkat dari sini,
+ * belok, masuk di sana" — kalimat yang hanya bisa diucapkan kalau ada ruang di
+ * SAMPING wadahnya untuk dibeloki. Pada 343 piksel wadah objectnya selebar
+ * layar; tidak ada tepi luar untuk ditempati, dan ketiga kartu berdiri tepat di
+ * bawahnya. Siku yang dipaksakan di sana akan berbelok DI ATAS wadahnya sendiri
+ * atau berbalik menyeberangi kartunya — keduanya terbaca sebagai coretan.
+ *
+ * Yang benar untuk dua benda yang bertetangga langsung adalah penunjuk lurus,
+ * dan `BeamField` sudah bisa menggambarnya: `shape` bawaannya busur, dan busur
+ * dengan `curvature: 0` adalah garis lurus yang kedua ujungnya tetap dipotong
+ * ke TEPI kotaknya masing-masing. Ketiganya sedikit menguncup ke arah pusat
+ * wadah karena tiap garis dibidik dari pusat kartunya ke pusat wadah, dan
+ * kuncup itulah yang membuat ketiganya terbaca menunjuk pada satu benda yang
+ * sama.
+ */
+/**
+ * Ambang TATA LETAK, bukan ambang gerak.
+ *
+ * Kartu keterangan baru pindah ke sudut wadah pada `lg:`, yaitu 1024px, sementara
+ * `useMotionTier` berganti tingkat pada 768px. Memakai ambang gerak untuk memilih
+ * bentuk garis menghasilkan cacat yang terukur: di antara 768 dan 1024 piksel,
+ * garis bersiku digambar ke kartu yang pada lebar itu masih `display: none`, dan
+ * kotak yang tidak dirender mengembalikan rect nol — ketiga garisnya berangkat
+ * dari sudut kiri atas panggung.
+ */
+const WIDE = "(min-width: 1024px)";
+
+/**
+ * Ambang TINGGI tempat baris keterangan masih muat.
+ *
+ * Komposisi ini dipaku ke satu layar, jadi apa pun yang ditambahkan padanya
+ * harus dibayar dari tinggi yang ada — dan sejak ada bantalan 80 piksel untuk
+ * membebaskannya dari navbar, yang tersedia tinggal `svh - 80`.
+ *
+ * Terukur pada lebar 382: tanpa baris keterangan komposisinya 565 piksel,
+ * dengan baris itu beserta jaraknya 684. Yang kedua menuntut layar setinggi
+ * 764 piksel; di bawah itu panggung lengketnya memusatkan isi lalu memangkas
+ * KEDUA ujungnya, jadi yang hilang bukan cuma kartunya melainkan juga garis
+ * pembuka section di atas.
+ *
+ * **Lebarnya ikut dibatasi, dan itu bukan kehati-hatian berlebihan.** Tinggi
+ * komposisi ini TUMBUH bersama lebar layar: di bawah `lg` object mengisi satu
+ * kolom penuh, jadi wadahnya setinggi tiga perempat lebar itu. Terukur pada
+ * 890x800 — lebar yang masih di bawah `lg` — komposisinya 868 piksel, terpotong
+ * meski layarnya tinggi. Ambang tinggi saja tidak pernah bisa menangkap itu.
+ *
+ * 440px adalah batas atas ponsel sungguhan; di atasnya susunan satu kolom ini
+ * memang tidak pernah punya ruang untuk baris tambahan apa pun.
+ *
+ * Jadi baris keterangan dan garisnya hanya dipasang di layar yang benar-benar
+ * punya ruangnya. Di layar lain komposisinya kembali persis seperti sebelumnya
+ * — bukan versi yang dipangkas, melainkan versi yang memang sudah terbukti
+ * muat. Koordinat, periode, dan peradaban tetap lengkap satu ketukan jauhnya di
+ * halaman warisan.
+ */
+const ROOMY = "(max-width: 440px) and (min-height: 770px)";
+
+const LEADERS: BeamLink[] = [
+  { from: "a-obj-coord", to: "a-obj-frame", curvature: 0, delay: 0 },
+  { from: "a-obj-period", to: "a-obj-frame", curvature: 0, delay: 0.14 },
+  { from: "a-obj-civ", to: "a-obj-frame", curvature: 0, delay: 0.28 },
+];
+
+/**
  * Yang Hilang — satu warisan, dalam wadahnya sendiri.
  *
  * Sebelumnya beat ini tinggal di dalam panggung penyelaman: object mendarat di
@@ -120,6 +189,8 @@ export function Relic({ heritage }: { heritage: Heritage }) {
   const root = useRef<HTMLElement>(null);
   const stage = useRef<HTMLDivElement>(null);
   const tier = useMotionTier();
+  const wide = useMediaQuery(WIDE);
+  const roomy = useMediaQuery(ROOMY);
   const [built, setBuilt] = useState(false);
 
   /* Apakah section ini sudah jauh terlewat.
@@ -508,7 +579,22 @@ export function Relic({ heritage }: { heritage: Heritage }) {
          menggeser pendaratan cuma akan memotong kicker dan judulnya. */
       className="relative motion-safe:-scroll-mt-[10svh] motion-safe:-mt-[105svh] motion-safe:h-[185svh] md:motion-safe:-mt-[130svh] md:motion-safe:h-[210svh] motion-reduce:pt-2 motion-reduce:pb-24 sm:motion-reduce:pt-3 sm:motion-reduce:pb-32"
     >
-      <div className="flex items-center overflow-hidden motion-safe:sticky motion-safe:top-0 motion-safe:h-svh">
+      {/* Bantalan atas di ponsel, dan ia menambal tumpang tindih yang terukur.
+
+          Komposisi ini DIPUSATKAN di panggung lengket setinggi satu layar.
+          Navbar mengambang di 12..68 piksel dari puncak layar; pada 382x820
+          komposisinya mulai di 41 piksel, jadi garis pembuka section dan
+          kickernya duduk persis di bawah navbar dan tidak pernah terlihat.
+
+          Bantalan menggeser titik mulainya setengah nilainya — isi yang
+          dipusatkan bergerak `pt/2`, bukan `pt` — jadi 80 piksel memberi
+          pergeseran 40 dan membawa puncaknya lewat navbar di semua ukuran
+          ponsel yang diuji.
+
+          `lg:` mengembalikannya ke nol: di layar lebar komposisinya sudah jauh
+          di bawah navbar, dan bantalan di sana hanya akan menggesernya turun
+          tanpa alasan. */}
+      <div className="flex items-center overflow-hidden motion-safe:sticky motion-safe:top-0 motion-safe:h-svh motion-safe:pt-20 lg:motion-safe:pt-0">
       {/* Panel cahaya — milik KELOMPOK DUA, bukan kelompok satu.
 
           Di sana ia menutup pada bingkai hero, lalu komposisi ini tetap harus
@@ -605,6 +691,11 @@ export function Relic({ heritage }: { heritage: Heritage }) {
                 defer
                 initialAutoRotate
                 initialHotspots={false}
+                /* 16:10 di ponsel, bukan 4:3. Selisihnya 43 piksel pada lebar
+                   350, dan 43 piksel itulah yang membayar jarak bebas navbar
+                   tanpa memaksa baris keterangan ikut disembunyikan lagi.
+                   Rasio `lg:` dibiarkan persis seperti sebelumnya. */
+                aspect="aspect-[16/10] lg:aspect-[16/9]"
                 released={released || (still && !visible)}
                 idleLabel={dict.landing.stageIdle}
               />
@@ -614,13 +705,29 @@ export function Relic({ heritage }: { heritage: Heritage }) {
           {/* `lg:contents` membuat pembungkus ini berhenti jadi kotak pada layar
               lebar, sehingga ketiga kartu di dalamnya diposisikan terhadap
               `stage` — bukan terhadap pembungkusnya. Di bawah `lg` ia kembali
-              jadi baris biasa di bawah penampil. */}
-          {/* Ketiga kartu keterangan juga hanya dari `lg` ke atas — alasan yang
-              sama, dan tanpa biaya: garis beam memang tidak pernah digambar di
-              bawah `lg`, jadi menyembunyikan kartunya tidak menghapus satu garis
-              pun. Koordinat, periode, dan peradaban tetap lengkap satu ketukan
-              jauhnya di halaman warisan. */}
-          <div className="mt-5 hidden flex-wrap gap-2 lg:contents">
+              jadi baris biasa di bawah penampil.
+
+              **Ketiganya TIDAK lagi disembunyikan di ponsel.** Dulu begitu,
+              dengan alasan yang waktu itu benar: komposisi ini dipaku ke satu
+              layar, dan tanpa garis beam yang digambar di sana kartunya memang
+              tidak menghubungkan apa pun. Sejak beam ikut dirender di ponsel,
+              kartu-kartu itu adalah UJUNGNYA — menyembunyikannya berarti
+              menggambar tiga garis yang menunjuk ke ketiadaan.
+
+              `mt-8`, bukan `mt-5`: jarak itu yang JADI panjang garisnya — tepi
+              kartu ke tepi wadah 32 piksel, dikurangi renggang 4 piksel di tiap
+              ujung, menyisakan garis 24 piksel. Pada `mt-5` yang lama garisnya
+              tinggal 12 piksel, dan garis sependek itu tidak terbaca sebagai
+              hubungan melainkan sebagai cacat render.
+
+              Tidak lebih dari 32 karena tiap piksel di sini dibayar dari tinggi
+              yang sama yang dipakai jarak bebas navbar — lihat `ROOMY`. */}
+          <div
+            className={cn(
+              "lg:contents",
+              roomy ? "mt-8 grid grid-cols-3 gap-1.5" : "hidden",
+            )}
+          >
             <MetadataChip
               data-obj-card
               data-beam="a-obj-coord"
@@ -646,18 +753,25 @@ export function Relic({ heritage }: { heritage: Heritage }) {
             />
           </div>
 
-          {/* Garis hanya ada di layar lebar.
+          {/* Garis digambar di KEDUA lebar, dengan geometri yang berbeda.
 
-              Pada 375px ketiga kartu duduk di bawah penampil dalam aliran
-              normal, dan siku 90 derajat di antara mereka akan melintasi teks —
-              yang dilarang aturan beam project ini. Hubungannya tetap
-              tersampaikan di sana lewat kedekatan dan label, persis seperti yang
-              dituntut: apa pun yang dikatakan garis wajib juga ada sebagai teks
-              di DOM. */}
-          {built && tier === "full" ? (
+              Siku dari `lg:` ke atas, penunjuk lurus di bawahnya — lihat
+              `LEADERS` untuk kenapa siku di lebar ponsel berhenti punya arti,
+              dan `WIDE` untuk kenapa ambangnya 1024 dan bukan 768.
+
+              `roomy` menjaga agar keduanya tidak pernah menunjuk ke kartu yang
+              disembunyikan karena layarnya terlalu pendek — lihat `ROOMY`.
+
+              `still` tetap tidak menggambar apa pun: di sana tidak ada satu pun
+              ScrollTrigger yang dipasang, jadi tidak ada urutan perakitan untuk
+              diikuti garisnya, dan sebuah garis yang muncul begitu saja tanpa
+              digambar adalah dekorasi. Hubungannya tetap tersampaikan lewat
+              kedekatan dan label — apa pun yang dikatakan garis wajib juga ada
+              sebagai teks di DOM. */}
+          {built && tier !== "still" && (wide || roomy) ? (
             <BeamField
               container={stage}
-              links={ELBOWS}
+              links={wide ? ELBOWS : LEADERS}
               variant="leader"
               className="z-[1] text-gold-dim"
             />

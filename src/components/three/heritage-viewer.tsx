@@ -71,6 +71,7 @@ export function HeritageViewer({
   initialHotspots = true,
   released = false,
   fill = false,
+  aspect = "aspect-[4/3] sm:aspect-[16/10] lg:aspect-[16/9]",
 }: {
   heritage: Heritage;
   defer?: boolean;
@@ -128,6 +129,19 @@ export function HeritageViewer({
    * dalam aliran biasa dan memang harus punya tinggi sendiri.
    */
   fill?: boolean;
+  /**
+   * Kelas rasio yang dipakai saat TIDAK `fill`.
+   *
+   * Ada karena satu pemanggil punya kendala tinggi yang tidak dimiliki
+   * pemanggil lain: komposisi "Yang Hilang" di landing dipaku ke satu layar,
+   * dan di ponsel rasio 4:3 memakan tinggi yang dibutuhkan baris keterangan dan
+   * jarak bebas navbar. Menyetel rasio bawaannya akan menyeret halaman konsep C
+   * dan panggung landing lama ikut berubah demi kendala yang bukan milik mereka.
+   *
+   * Bawaannya tetap perilaku lama, jadi pemanggil yang tidak menyetelnya tidak
+   * berubah sama sekali.
+   */
+  aspect?: string;
 }) {
   const { locale, dict } = useI18n();
   const controlsRef = useRef<OrbitControlsImpl | null>(null);
@@ -233,7 +247,7 @@ export function HeritageViewer({
         aria-label={`${dict.viewer.label} — ${heritage.name[locale]}`}
         className={cn(
           "relative w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-gold",
-          fill ? "h-full" : "aspect-[4/3] sm:aspect-[16/10] lg:aspect-[16/9]",
+          fill ? "h-full" : aspect,
         )}
       >
       {mounted ? (
