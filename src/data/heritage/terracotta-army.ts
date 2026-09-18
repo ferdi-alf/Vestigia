@@ -93,8 +93,8 @@ export const terracottaArmy: HeritageMeta = {
         id: "Setiap prajurit berdiri di atas lempeng tanah liat persegi. Alas ini mencegah patung setinggi hampir dua meter itu terbenam ke lantai lorong yang berupa tanah padat, dan menjaga formasi tetap rapi.",
         en: "Each soldier stands on a square clay slab. The base kept a figure of nearly two metres from sinking into the packed-earth corridor floor, and held the formation in line.",
       },
-      anchor: [0.5, 0.02, 0.5],
-      surface: "ground",
+      anchor: [0.5, 0.06, 0.98],
+      surface: "face",
     },
   ],
 

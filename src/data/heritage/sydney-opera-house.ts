@@ -60,7 +60,7 @@ export const sydneyOperaHouse: HeritageMeta = {
         id: "Cangkang tertinggi mencapai sekitar enam puluh meter di atas permukaan laut. Karena semuanya berasal dari bola berjari-jari sama, cangkang yang tampak berbeda ukuran sebenarnya hanya potongan yang berbeda luasnya.",
         en: "The tallest shell reaches about sixty metres above sea level. Because all come from a sphere of the same radius, shells that appear different in size are only differently sized sections.",
       },
-      anchor: [0.45, 0.95, 0.5],
+      anchor: [0.18, 0.95, 0.38],
       surface: "top",
     },
     {
@@ -71,7 +71,7 @@ export const sydneyOperaHouse: HeritageMeta = {
         id: "Dari jauh atap terlihat putih polos. Dari dekat, pola berlian dari ubin mengilap dan matte terlihat jelas — dan pola itulah yang membuat bangunan ini tidak pernah terlihat sama pada dua jam yang berbeda.",
         en: "From a distance the roof reads as plain white. Up close the diamond pattern of glossy and matte tiles is clear — and that pattern is why the building never looks the same at two different hours.",
       },
-      anchor: [0.5, 0.6, 0.05],
+      anchor: [0.04, 0.55, 0.38],
       surface: "face",
     },
     {
@@ -82,7 +82,7 @@ export const sydneyOperaHouse: HeritageMeta = {
         id: "Menutup celah antara cangkang dan podium dengan kaca adalah masalah yang belum selesai saat Utzon mengundurkan diri pada 1966. Penyelesaiannya dikerjakan Peter Hall, dan bagian inilah yang paling menyimpang dari niat awal perancangnya.",
         en: "Closing the gap between shell and podium with glass was unresolved when Utzon resigned in 1966. It was completed by Peter Hall, and it is the part that departs furthest from the designer's original intent.",
       },
-      anchor: [0.5, 0.3, 0.9],
+      anchor: [0.04, 0.22, 0.42],
       surface: "face",
     },
     {
@@ -93,7 +93,7 @@ export const sydneyOperaHouse: HeritageMeta = {
         id: "Podium berundak ini menampung ruang latihan, bengkel, dan seluruh sirkulasi penonton. Ia juga yang mengangkat cangkang cukup tinggi sehingga terbaca dari air — bangunan ini dirancang untuk dilihat dari pelabuhan.",
         en: "The stepped podium houses rehearsal rooms, workshops and all audience circulation. It also lifts the shells high enough to read from the water — this building was designed to be seen from the harbour.",
       },
-      anchor: [0.5, 0.05, 0.85],
+      anchor: [0.28, 0.05, 0.47],
       surface: "ground",
     },
   ],

@@ -60,7 +60,7 @@ export const stonehenge: HeritageMeta = {
         id: "Ambang-ambang di atas cincin sarsen membentuk lingkaran menerus, masing-masing dilengkungkan agar mengikuti kurva. Mengangkatnya ke ketinggian lebih dari empat meter tanpa derek adalah bagian tersulit dari seluruh proyek.",
         en: "The lintels above the sarsen circle form a continuous ring, each curved to follow the arc. Raising them more than four metres without cranes was the hardest part of the entire project.",
       },
-      anchor: [0.5, 0.95, 0.4],
+      anchor: [0.53, 0.95, 0.42],
       surface: "top",
     },
     {
@@ -71,7 +71,7 @@ export const stonehenge: HeritageMeta = {
         id: "Lima pasang tiang bertutup ambang disusun membentuk tapal kuda yang terbuka ke arah terbit matahari musim panas. Trilithon terbesar dulu menjulang lebih dari tujuh meter; salah satu tiangnya kini sudah tumbang.",
         en: "Five pairs of uprights capped by lintels form a horseshoe opening toward midsummer sunrise. The largest trilithon once stood over seven metres; one of its uprights has since fallen.",
       },
-      anchor: [0.5, 0.75, 0.5],
+      anchor: [0.6, 0.75, 0.47],
       surface: "top",
     },
     {
@@ -82,7 +82,7 @@ export const stonehenge: HeritageMeta = {
         id: "Batu sarsen berasal dari sekitar dua puluh lima kilometer di utara. Permukaannya dikerjakan dengan palu batu untuk diratakan — pekerjaan yang meninggalkan bekas pukulan yang masih bisa dilihat dari dekat.",
         en: "The sarsens come from about twenty-five kilometres to the north. Their faces were dressed flat with stone mauls — work that left percussion marks still visible up close.",
       },
-      anchor: [0.15, 0.5, 0.5],
+      anchor: [0.15, 0.38, 0.42],
       surface: "face",
     },
     {

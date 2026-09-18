@@ -60,7 +60,7 @@ export const petra: HeritageMeta = {
         id: "Struktur bundar di tingkat atas dimahkotai guci batu setinggi beberapa meter. Ukurannya sengaja dibesarkan agar tetap terbaca dari dasar tebing, hampir lima puluh meter di bawah.",
         en: "The round structure on the upper storey is crowned by a stone urn several metres tall. Its size is deliberately exaggerated so that it still reads from the base of the cliff, nearly fifty metres below.",
       },
-      anchor: [0.5, 0.9, 0.4],
+      anchor: [0.65, 0.9, 0.38],
       surface: "top",
     },
     {
@@ -71,7 +71,7 @@ export const petra: HeritageMeta = {
         id: "Pedimen yang terbelah di tengah adalah ciri khas arsitektur Nabatea. Belahan itu membingkai tholos di belakangnya, mengarahkan pandangan ke atas alih-alih menutupnya.",
         en: "The pediment split at its centre is a Nabataean signature. The break frames the tholos behind it, carrying the eye upward instead of closing the composition.",
       },
-      anchor: [0.5, 0.72, 0.1],
+      anchor: [0.25, 0.72, 0.45],
       surface: "face",
     },
     {
@@ -82,7 +82,7 @@ export const petra: HeritageMeta = {
         id: "Di balik pintu raksasa itu hanya ada satu ruang persegi yang polos. Seluruh usaha dicurahkan pada fasad, karena bangunan ini dimaksudkan untuk dilihat dari luar dalam upacara, bukan dihuni.",
         en: "Behind the enormous doorway lies a single plain rectangular chamber. All the effort went into the facade, because this building was meant to be seen from outside during ritual, not inhabited.",
       },
-      anchor: [0.5, 0.25, 0.05],
+      anchor: [0.25, 0.2, 0.47],
       surface: "face",
     },
     {

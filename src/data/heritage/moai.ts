@@ -93,8 +93,8 @@ export const moai: HeritageMeta = {
         id: "Bagian bawah moai diratakan agar bisa berdiri di atas ahu, panggung batu upacara. Kemiringan sedikit ke depan pada dasar inilah yang memungkinkan teknik menggoyang patung untuk memindahkannya.",
         en: "The underside is flattened so the figure could stand on an ahu, the ceremonial stone platform. A slight forward lean built into that base is what makes the rocking method of transport possible.",
       },
-      anchor: [0.5, 0.02, 0.5],
-      surface: "ground",
+      anchor: [0.5, 0.06, 0.02],
+      surface: "face",
     },
   ],
 

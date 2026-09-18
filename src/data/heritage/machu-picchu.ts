@@ -60,7 +60,7 @@ export const machuPicchu: HeritageMeta = {
         id: "Bangunan di bagian tertinggi menggunakan pengerjaan batu paling halus di seluruh kota. Kualitas potongan batu di Machu Picchu bukan soal selera melainkan penanda peringkat: makin penting bangunannya, makin rapat sambungannya.",
         en: "The buildings at the top use the finest stonework on the site. Cut quality at Machu Picchu is not a matter of taste but a marker of rank: the more important the building, the tighter its joints.",
       },
-      anchor: [0.4, 0.95, 0.45],
+      anchor: [0.58, 0.95, 0.78],
       surface: "top",
     },
     {

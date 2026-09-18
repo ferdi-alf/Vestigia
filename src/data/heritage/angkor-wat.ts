@@ -71,7 +71,7 @@ export const angkorWat: HeritageMeta = {
         id: "Keempat menara sudut lebih rendah dari menara pusat dan berbentuk kuncup teratai bersusun. Jaraknya diatur agar dari jalan masuk barat hanya tiga menara yang terlihat, dan kelimanya baru terbaca dari sudut serong.",
         en: "The four corner towers stand lower than the centre and take the form of tiered lotus buds. Their spacing is set so that only three read from the western causeway; all five appear only from an oblique angle.",
       },
-      anchor: [0.25, 0.8, 0.25],
+      anchor: [0.38, 0.8, 0.42],
       surface: "top",
     },
     {
