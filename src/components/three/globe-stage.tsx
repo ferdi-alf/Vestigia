@@ -454,7 +454,7 @@ export function GlobeStage({
   /** situs yang penandanya bertahan saat empat belas lainnya padam */
   targetSlug: string;
   progress: React.RefObject<DiveProgress>;
-  /** false ketika kanvas keluar layar, tab disembunyikan, atau video menutup bingkai */
+  /** false ketika kanvas keluar layar atau tab disembunyikan */
   active: boolean;
   /** pengguna meminta gerak dikurangi — progres tidak pernah berubah lagi */
   still: boolean;

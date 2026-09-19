@@ -31,7 +31,7 @@ import { Invite } from "@/concepts/a/invite";
  * Penjelajah, `#pemandu` di Pemandu, `#tujuan` di Pintu Masuk, `#tentang` di
  * Penutup. Sebelumnya keempatnya menunjuk ke ketiadaan.
  *
- * Halaman ini tetap utuh dengan nol GLB, nol gambar, dan nol video.
+ * Halaman ini tetap utuh dengan nol GLB dan nol gambar.
  */
 export default function HomePage() {
   const heritage = featuredHeritage();

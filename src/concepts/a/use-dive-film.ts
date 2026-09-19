@@ -23,10 +23,9 @@ import { seedNav, setNavDiving } from "@/lib/motion/nav-shell";
  *
  * ---
  *
- * **TANPA VIDEO.** Yang hilang bersamanya: kedua panel tirai, kerai
- * keterbacaan, dan jendela video. Tidak ada lagi yang perlu disapu bersih dan
- * tidak ada lagi yang perlu dijaga keterbacaannya — teks berdiri di atas kertas
- * sejak bingkai pertama. Yang tersisa satu subjek: globe.
+ * **SATU SUBJEK.** Tidak ada panel tirai yang perlu disapu bersih dan tidak ada
+ * kerai keterbacaan yang perlu dijaga — teks berdiri di atas kertas sejak
+ * bingkai pertama. Yang dianimasikan cuma satu: globe.
  */
 export function useDiveFilm(
   scope: RefObject<HTMLElement | null>,

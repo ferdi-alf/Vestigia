@@ -29,15 +29,12 @@ const DUST = slot("a-dust");
  *
  * ---
  *
- * **VIDEO DIBUANG SELURUHNYA.** Versi sebelumnya membuka dengan klip 7,95 MB
- * yang di-scrub, lalu menutupnya dengan dua panel kertas untuk menyerahkan
- * bingkai ke globe. Pemilik project memotongnya: halaman kini sepenuhnya
- * animasi, tanpa satu byte video pun.
+ * **SELURUHNYA ANIMASI.** Pembuka ini tidak memuat satu asset berat pun — yang
+ * bergerak cuma teks, globe, dan lapisan kertas di belakangnya.
  *
- * Yang ikut pergi bersamanya karena memang tidak punya pekerjaan lagi: kedua
- * panel tirai (tidak ada yang perlu disapu bersih) dan kerai keterbacaan (teks
- * berdiri di atas kertas sejak bingkai pertama, bukan di atas klip gelap).
- * Transfer halaman ini turun sekitar 8 MB karenanya.
+ * Karena tidak ada bingkai yang perlu diserahterimakan, tidak ada panel tirai
+ * yang perlu disapu bersih dan tidak ada kerai keterbacaan yang perlu dijaga:
+ * teks berdiri di atas kertas sejak bingkai pertama.
  *
  * **Urutan lapisan, dan urutannya syarat:**
  *
@@ -81,8 +78,8 @@ export function Dive({ heritage, marks }: { heritage: Heritage; marks: GlobeMark
   const still = useStillPreference();
 
   /* Pemilik kotak progres ada di sini, dan hanya di sini.
-     Film menerbitkan angkanya; panggung 3D dan video membacanya. Identitasnya
-     stabil, jadi ia tidak pernah memicu film dirakit ulang. */
+     Film menerbitkan angkanya; panggung 3D dan lapisan kertas membacanya.
+     Identitasnya stabil, jadi ia tidak pernah memicu film dirakit ulang. */
   const publish = useCallback((patch: Partial<DiveProgress>) => {
     Object.assign(progress.current, patch);
   }, []);

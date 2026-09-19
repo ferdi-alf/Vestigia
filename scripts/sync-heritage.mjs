@@ -497,9 +497,32 @@ function main() {
   const { assets, problems, missingSourceDir } = scanSource(slugMap);
 
   if (missingSourceDir) {
-    console.log(c.yellow(`  Folder /3d-object tidak ditemukan di ${SOURCE_DIR}`));
-    console.log(c.dim("  Manifest dikosongkan. Aplikasi tetap bisa di-build.\n"));
-    writeManifest([]);
+    /* Drop zone tidak ada — dan itu keadaan NORMAL, bukan kesalahan. Model hasil
+       pemampatan ikut masuk repo, jadi begitu berkas asli tidak lagi ada di
+       mesin ini, `public/models/` beserta manifestnya yang jadi sumber
+       kebenaran. Script ini tidak punya urusan menyentuh keduanya.
+
+       **Versi sebelumnya memanggil `writeManifest([])` di sini, dan itu bug yang
+       baru menggigit pada hari drop zone benar-benar hilang:** manifest
+       dikosongkan, lima belas warisan lenyap dari aplikasi, dan `npm run build`
+       tetap HIJAU — karena secara teknis memang tidak ada yang rusak. Situsnya
+       cuma jadi kosong.
+
+       Kegagalan yang mengaku berhasil persis seperti itu yang dilarang di
+       seluruh project ini, dan script ini sendiri yang melanggarnya. Yang benar:
+       tidak menyentuh apa pun, lalu melapor apa adanya. */
+    const bertahan = fs.existsSync(MANIFEST)
+      ? (fs.readFileSync(MANIFEST, "utf8").match(/slug:/g) || []).length
+      : 0;
+
+    if (bertahan === 0) {
+      console.log(c.yellow("  Drop zone /3d-object tidak ada, dan manifest kosong."));
+      console.log(c.yellow("  Aplikasi akan jalan tanpa satu warisan pun.\n"));
+      return;
+    }
+
+    console.log(c.dim("  Drop zone /3d-object tidak ada — sinkronisasi dilewati."));
+    console.log(c.dim(`  ${bertahan} model di public/models/ dipakai apa adanya.\n`));
     return;
   }
 

@@ -228,11 +228,7 @@ export const SECTION_MEDIA: readonly MediaSlot[] = [
    tema gelap yang dulu DITOLAK karena situs berpindah ke terang. Tetapi
    **konsep A gelap**, jadi justru merekalah yang cocok sekarang. Nol gambar
    baru perlu digenerate.
-
-   `sky-light.png` satu-satunya yang benar-benar baru, dan satu-satunya yang
-   terang — jadi ia milik B dan C. Ukurannya 960 KB sebagai SUMBER; `MediaLayer`
-   merendernya lewat `next/image`, yang menyajikan WebP teroptimasi, sehingga
-   yang diunduh peramban jauh lebih kecil. */
+ */
 export const CONCEPT_MEDIA: readonly MediaSlot[] = [
   {
     id: "a-void",
@@ -319,17 +315,6 @@ export const CONCEPT_MEDIA: readonly MediaSlot[] = [
     depth: 0.28,
     fallback: "fb-ridge-mid",
     opacity: 0.35,
-  },
-  {
-    id: "bc-sky",
-    file: "sky-light.png",
-    alt: { id: "Langit pucat dengan matahari rendah di kiri", en: "Pale sky with a low sun at the left" },
-    composite: "cover",
-    width: 1989,
-    height: 793,
-    depth: 0.08,
-    fallback: "fb-sky",
-    opacity: 0.5,
   },
 ];
 

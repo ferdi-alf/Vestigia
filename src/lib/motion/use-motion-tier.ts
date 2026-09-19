@@ -17,9 +17,9 @@ export type MotionTier = "full" | "compact" | "still";
  *   perlu tahu "diam atau tidak" — panggung 3D dan `frameloop`-nya.
  * - Hook ini mengembalikan **ketiga tingkatnya**, karena ada komponen yang
  *   merender POHON YANG BERBEDA di tiap tingkat, bukan sekadar menyetel prop.
- *   `ScrubVideo` begitu: satu `<video>` di layar lebar, tiga gambar diam di
- *   ponsel, satu gambar diam saat gerak dikurangi. Boolean tidak cukup untuk
- *   memilih di antara tiga pohon.
+ *   Garis penunjuk di `preview.tsx` begitu: siku 90 derajat di layar lebar,
+ *   penunjuk lurus di ponsel, dan garis yang diam saat gerak dikurangi. Boolean
+ *   tidak cukup untuk memilih di antara tiga pohon.
  *
  * Ambang breakpoint-nya dibaca dari `MOTION_QUERIES`, bukan ditulis ulang di
  * sini. Satu tempat untuk ambang berarti tidak ada kemungkinan JS dan GSAP
@@ -27,7 +27,7 @@ export type MotionTier = "full" | "compact" | "still";
  *
  * Nilai awalnya `still`, dan itu disengaja: itu tingkat yang paling sedikit
  * memuat apa pun. Render pertama di server dan bingkai pertama di peramban
- * tidak pernah menarik satu byte video untuk perangkat yang ternyata tidak
+ * tidak pernah memasang lapisan gerak untuk perangkat yang ternyata tidak
  * akan memakainya.
  */
 export function useMotionTier(): MotionTier {

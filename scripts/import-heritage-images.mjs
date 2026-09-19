@@ -48,7 +48,8 @@
  * sini oleh script LOKAL yang tidak pernah berjalan di CI — sumbernya berada di
  * luar repo dan mesin build tidak akan pernah punya foldernya — jadi
  * mendaftarkannya di `package.json` menambah baris tanpa menambah kemampuan.
- * Presedennya `encode-video.mjs`, yang memakai ffmpeg dan bahkan bukan paket.
+ * Presedennya `make-thumbs.mjs`, yang menulis PNG lewat `zlib` bawaan Node dan
+ * karena itu tidak perlu mendaftarkan apa pun sama sekali.
  *
  * Yang wajib: gagal dengan SUARA. Script berhenti dengan pesan yang menyebut
  * penyebabnya kalau sharp tidak bisa dimuat, bukan diam-diam menghasilkan nol

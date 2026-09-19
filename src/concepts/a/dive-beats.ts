@@ -7,15 +7,13 @@
  *
  * ---
  *
- * **VIDEO DIBUANG SELURUHNYA.** Versi sebelumnya membuka dengan klip ter-scrub
- * 7,95 MB, menutupnya dengan dua panel kertas, lalu menyerahkan bingkai ke
- * globe. Pemilik project memotongnya: pembuka kini teks dan globe saja, dan
- * seluruh halaman jadi animasi tanpa satu byte video pun.
+ * **SATU MEDIUM, SATU ANGKA.** Pembuka ini teks dan globe saja — seluruhnya
+ * animasi, tanpa satu asset berat pun yang harus dimuat lebih dulu.
  *
- * Yang ikut hilang bersamanya dan memang tidak punya pekerjaan lagi: tirai
- * (tidak ada yang perlu disapu bersih), kerai keterbacaan (teks berdiri di atas
- * kertas sejak bingkai pertama), `videoTimeAt`, `videoOpacityAt`, dan seluruh
- * gagasan "dua medium, satu angka". Tinggal satu medium.
+ * Konsekuensinya menyederhanakan seluruh berkas ini: karena cuma ada satu
+ * medium, tidak ada bingkai yang perlu diserahterimakan antar medium, tidak ada
+ * tirai yang perlu disapu bersih, dan tidak ada kerai keterbacaan yang perlu
+ * dijaga — teks berdiri di atas kertas sejak bingkai pertama.
  *
  * ---
  *
@@ -141,10 +139,9 @@ export const ENTER_FADE_FROM = 0.18;
    transisi yang datang lalu pergi; ia permukaan halaman berikutnya yang sampai
    lebih dulu.
 
-   Mekanismenya pernah hidup di project ini sebagai tirai kertas yang
-   menyerahkan bingkai dari video ke globe, lalu ikut terhapus bersama
-   videonya. Yang dipulihkan mekanismenya; yang berubah wataknya — dulu dua
-   pintu kertas, sekarang cahaya.
+   Mekanismenya pernah hidup di project ini sebagai sepasang pintu kertas yang
+   menutup dari dua sisi. Yang dipulihkan mekanismenya; yang berubah wataknya —
+   dulu kertas pekat, sekarang cahaya.
 
    **Jendelanya MEMOTONG `enter`, dan itu disengaja.** Penembusan bumi tidak
    berhenti untuk memberi jalan: kamera terus jatuh menembus kerak sementara
