@@ -6,6 +6,7 @@ import { useI18n } from "@/lib/i18n/client";
 import type { KnowledgeLevel } from "@/lib/ai/types";
 import { cn } from "@/lib/cn";
 import { buttonClass } from "@/components/ui/button";
+import { RichText } from "@/components/ai/rich-text";
 
 interface Turn {
   role: "user" | "assistant";
@@ -142,19 +143,20 @@ export function GuidePanel({ heritage }: { heritage: GuideSite }) {
         ) : (
           turns.map((turn, index) => (
             <div key={index} className={turn.role === "user" ? "text-right" : ""}>
-              <p
-                className={cn(
-                  "inline-block max-w-[90%] whitespace-pre-wrap rounded-lg px-3 py-2 text-sm leading-relaxed",
-                  turn.role === "user"
-                    ? "bg-raised text-ink"
-                    : "text-ink-soft",
-                )}
-              >
-                {turn.content ||
-                  (busy && index === turns.length - 1 ? (
-                    <span className="text-ink-dim">{dict.ai.thinking}</span>
-                  ) : null)}
-              </p>
+              {/* Yang diketik pengunjung tampil apa adanya — ia tidak menulis
+                  Markdown, dan menafsirkannya hanya akan memakan tanda bintang
+                  yang memang ia maksudkan. Balasan model yang dirender. */}
+              {turn.role === "user" ? (
+                <p className="inline-block max-w-[90%] whitespace-pre-wrap rounded-lg bg-raised px-3 py-2 text-sm leading-relaxed text-ink">
+                  {turn.content}
+                </p>
+              ) : turn.content ? (
+                <div className="max-w-[90%] px-3 py-2 text-sm">
+                  <RichText text={turn.content} />
+                </div>
+              ) : busy && index === turns.length - 1 ? (
+                <p className="px-3 py-2 text-sm leading-relaxed text-ink-dim">{dict.ai.thinking}</p>
+              ) : null}
             </div>
           ))
         )}

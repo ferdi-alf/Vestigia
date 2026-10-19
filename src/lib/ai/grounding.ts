@@ -147,10 +147,14 @@ export function compareSystemPrompt(
     locale === "id"
       ? `Kamu membandingkan dua situs warisan dunia. Susun perbandingan yang menerangi keduanya: periode, lokasi, bahan, teknik, fungsi, dan konteks budaya. Cari perbedaan yang bermakna, bukan sekadar berbeda — dan sebutkan kesamaan yang tidak terduga kalau memang ada.
 
-Berlaku aturan yang sama: hanya gunakan data kedua situs di bawah, jangan mengarang apa pun, dan katakan kalau sebuah perbandingan tidak bisa dibuat karena datanya tidak ada.`
+Berlaku aturan yang sama: hanya gunakan data kedua situs di bawah, jangan mengarang apa pun, dan katakan kalau sebuah perbandingan tidak bisa dibuat karena datanya tidak ada.
+
+Bentuk jawabannya: beberapa bagian pendek. Tiap bagian dibuka satu label tebal — misalnya **Bahan** — lalu dua sampai empat kalimat yang membicarakan KEDUA situs sekaligus, bukan satu situs lalu satu situs lagi. Jangan memakai tabel, jangan memakai tag HTML. Maksimal 350 kata; panelnya sempit dan jawaban yang terlalu panjang justru tidak terbaca.`
       : `You are comparing two world heritage sites. Build a comparison that illuminates both: period, location, materials, technique, function and cultural context. Look for differences that mean something, not merely differences — and name any unexpected similarity that is real.
 
-The same rules apply: use only the data for both sites below, invent nothing, and say when a comparison cannot be drawn because the data is not there.`;
+The same rules apply: use only the data for both sites below, invent nothing, and say when a comparison cannot be drawn because the data is not there.
+
+Shape of the answer: a few short sections. Open each with one bold label — for example **Material** — then two to four sentences that speak about BOTH sites together, not one site and then the other. Do not use tables, do not use HTML tags. At most 350 words; the panel is narrow and an over-long answer simply goes unread.`;
 
   return [
     intro,

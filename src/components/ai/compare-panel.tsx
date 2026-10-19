@@ -5,6 +5,7 @@ import type { Heritage } from "@/data/types";
 import { useI18n } from "@/lib/i18n/client";
 import { cn } from "@/lib/cn";
 import { buttonClass } from "@/components/ui/button";
+import { RichText } from "@/components/ai/rich-text";
 
 /**
  * Perbandingan dua situs.
@@ -116,7 +117,9 @@ export function ComparePanel({ heritage }: { heritage: CompareSite[] }) {
 
       {answer ? (
         <div className="panel mt-8 p-6">
-          <p className="whitespace-pre-wrap text-base leading-relaxed text-ink-soft">{answer}</p>
+          <div className="text-base">
+            <RichText text={answer} />
+          </div>
           {offline ? (
             <p className="mt-5 border-t border-line pt-3 text-[0.7rem] leading-relaxed text-ink-dim">
               {dict.ai.offline} — {dict.ai.offlineNote}
