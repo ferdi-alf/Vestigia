@@ -45,7 +45,7 @@ bagian dari produk). **Yang lebih tinggi menang saat bertentangan.**
 | 1 | **Instruksi pemilik project** + berkas ini | segalanya | mengalahkan seluruh saran skill |
 | 2 | **Kontrak data & anti-mengarang** (`registry.ts`, `lib/ai/grounding.ts`) | apa yang boleh tampil dan apa yang boleh dikatakan | tidak bisa ditawar oleh alasan estetis apa pun |
 | 3 | **Aksesibilitas & gerak-dikurangi** | semua keputusan UI | halaman yang gagal di sini ditolak seberapa pun indahnya |
-| 4 | `cinematic-scroll` (web-design-studio) | arah seni, koreografi scroll, momen tanda tangan, resep | otoritas atas **pengalamannya seperti apa** |
+| 4 | `cinematic-scroll` | arah seni, koreografi scroll, momen tanda tangan, resep | otoritas atas **pengalamannya seperti apa** |
 | 5 | `design-system`, `brand` | arsitektur token, konsistensi identitas | **memvalidasi** token yang sudah ada, bukan menggantinya |
 | 6 | `ui-ux-pro-max` | daftar periksa UX/a11y, pola interaksi | alat **konsultasi**; hasil pencarian tidak pernah diterapkan otomatis |
 | 7 | `gsap-scrolltrigger` → `gsap-timeline` → `gsap-core`; `gsap-react` (siklus hidup); `gsap-performance` (jalur panas); `gsap-plugins`, `gsap-utils`, `gsap-frameworks` (bila benar-benar dibutuhkan) | **bagaimana gerak diimplementasikan** | `gsap-performance` mengalahkan `cinematic-scroll` pada konflik biaya frame. Plugin berbayar di `gsap-plugins` (SplitText, ScrollSmoother, Flip) **tidak dipakai** — belum ada kebutuhan yang tidak bisa dijawab ScrollTrigger |
