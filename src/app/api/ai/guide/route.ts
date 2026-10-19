@@ -1,7 +1,8 @@
 import { getHeritage } from "@/data/registry";
 import { isLocale } from "@/lib/i18n/dictionaries";
 import { getProvider } from "@/lib/ai";
-import { checkRateLimit, clientKey } from "@/lib/ai/rate-limit";
+import { guardRequest, rateLimited } from "@/lib/ai/rate-limit";
+import { screenInput, MAX_MESSAGE_CHARS } from "@/lib/ai/guard";
 import type { AiMessage, KnowledgeLevel } from "@/lib/ai/types";
 
 export const runtime = "nodejs";
@@ -17,13 +18,8 @@ interface Body {
 }
 
 export async function POST(request: Request) {
-  const limit = checkRateLimit(clientKey(request));
-  if (!limit.allowed) {
-    return Response.json(
-      { error: "rate_limited" },
-      { status: 429, headers: { "retry-after": String(limit.retryAfter) } },
-    );
-  }
+  const guard = guardRequest(request);
+  if (!guard.allowed) return rateLimited(guard);
 
   let body: Body;
   try {
@@ -44,11 +40,27 @@ export async function POST(request: Request) {
 
   const messages = (body.messages ?? [])
     .filter((m) => (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
-    .map((m) => ({ role: m.role, content: m.content.slice(0, 2000) }))
+    .map((m) => ({ role: m.role, content: m.content.slice(0, MAX_MESSAGE_CHARS) }))
     .slice(-10);
 
   if (messages.length === 0 || messages.at(-1)?.role !== "user") {
     return Response.json({ error: "no_question" }, { status: 400 });
+  }
+
+  /* Penyaringan sebelum model dipanggil. Permintaan yang jelas di luar
+     cakupan — pengambilalihan peran, tugas pemrograman — dijawab di sini,
+     sehingga ia tidak bisa dibujuk dan tidak menghabiskan satu token pun.
+     Lapisan utamanya tetap system prompt; lihat `lib/ai/guard.ts`. */
+  const screened = screenInput(messages.at(-1)!.content, locale, heritage.name[locale]);
+  if (!screened.ok) {
+    return new Response(screened.reply, {
+      headers: {
+        ...guard.headers,
+        "content-type": "text/plain; charset=utf-8",
+        "cache-control": "no-store",
+        "x-ai-refused": screened.reason,
+      },
+    });
   }
 
   const provider = await getProvider();
@@ -84,6 +96,7 @@ export async function POST(request: Request) {
 
   return new Response(stream, {
     headers: {
+      ...guard.headers,
       "content-type": "text/plain; charset=utf-8",
       "cache-control": "no-store",
       "x-ai-provider": provider.id,

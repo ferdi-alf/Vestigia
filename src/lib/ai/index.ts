@@ -20,12 +20,16 @@ export async function getProvider(): Promise<AiProvider> {
   if (cached) return cached;
 
   const requested = process.env.AI_PROVIDER;
+  const groqKey = process.env.GROQ_API_KEY;
   const anthropicKey = process.env.ANTHROPIC_API_KEY;
   const googleKey = process.env.GOOGLE_API_KEY;
 
   // Permintaan eksplisit menang, selama kuncinya benar-benar ada.
   if (requested === "grounded") {
     cached = groundedProvider;
+  } else if ((requested === "groq" || !requested) && groqKey) {
+    const { createGroqProvider } = await import("./providers/groq");
+    cached = createGroqProvider(groqKey);
   } else if ((requested === "anthropic" || !requested) && anthropicKey) {
     const { createAnthropicProvider } = await import("./providers/anthropic");
     cached = createAnthropicProvider(anthropicKey);

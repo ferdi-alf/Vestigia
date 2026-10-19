@@ -1,19 +1,14 @@
 import { getHeritage } from "@/data/registry";
 import { isLocale } from "@/lib/i18n/dictionaries";
 import { getProvider } from "@/lib/ai";
-import { checkRateLimit, clientKey } from "@/lib/ai/rate-limit";
+import { guardRequest, rateLimited } from "@/lib/ai/rate-limit";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 export async function POST(request: Request) {
-  const limit = checkRateLimit(clientKey(request));
-  if (!limit.allowed) {
-    return Response.json(
-      { error: "rate_limited" },
-      { status: 429, headers: { "retry-after": String(limit.retryAfter) } },
-    );
-  }
+  const guard = guardRequest(request);
+  if (!guard.allowed) return rateLimited(guard);
 
   let body: { slug?: string; locale?: string };
   try {
@@ -62,6 +57,7 @@ export async function POST(request: Request) {
 
   return new Response(stream, {
     headers: {
+      ...guard.headers,
       "content-type": "text/plain; charset=utf-8",
       "cache-control": "no-store",
       "x-ai-provider": provider.id,

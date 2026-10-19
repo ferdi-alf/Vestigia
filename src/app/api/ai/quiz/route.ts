@@ -2,7 +2,7 @@ import { HERITAGE, getHeritage } from "@/data/registry";
 import { isLocale } from "@/lib/i18n/dictionaries";
 import { getProvider } from "@/lib/ai";
 import { buildOfflineQuiz } from "@/lib/ai/providers/grounded";
-import { checkRateLimit, clientKey } from "@/lib/ai/rate-limit";
+import { guardRequest, rateLimited } from "@/lib/ai/rate-limit";
 import type { QuizQuestion } from "@/lib/ai/types";
 
 export const runtime = "nodejs";
@@ -50,13 +50,8 @@ function parseQuiz(raw: string): QuizQuestion[] | null {
 }
 
 export async function POST(request: Request) {
-  const limit = checkRateLimit(clientKey(request));
-  if (!limit.allowed) {
-    return Response.json(
-      { error: "rate_limited" },
-      { status: 429, headers: { "retry-after": String(limit.retryAfter) } },
-    );
-  }
+  const guard = guardRequest(request);
+  if (!guard.allowed) return rateLimited(guard);
 
   let body: { slug?: string; locale?: string };
   try {
@@ -77,7 +72,7 @@ export async function POST(request: Request) {
   const fallback = () =>
     Response.json(
       { questions: buildOfflineQuiz(heritage, others, locale), offline: true },
-      { headers: { "cache-control": "no-store" } },
+      { headers: { ...guard.headers, "cache-control": "no-store" } },
     );
 
   if (provider.isOffline) return fallback();
@@ -104,7 +99,7 @@ export async function POST(request: Request) {
 
     return Response.json(
       { questions, offline: false },
-      { headers: { "cache-control": "no-store", "x-ai-provider": provider.id } },
+      { headers: { ...guard.headers, "cache-control": "no-store", "x-ai-provider": provider.id } },
     );
   } catch (error) {
     if (request.signal.aborted) return new Response(null, { status: 499 });
