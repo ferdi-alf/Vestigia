@@ -31,8 +31,14 @@ const sans = Geist({
  * WhatsApp atau X, bukan peramban yang sedang membuka halaman. Nilai bawaannya
  * localhost supaya pengembangan tetap jalan; setel NEXT_PUBLIC_SITE_URL saat
  * deploy.
+ *
+ * `||`, bukan `??`, dan bedanya bukan gaya penulisan: `.env.example` memuat
+ * `NEXT_PUBLIC_SITE_URL=` tanpa nilai, jadi siapa pun yang menyalinnya —
+ * persis seperti yang disuruh bab "Cara menjalankan" — mendapat string
+ * KOSONG, bukan `undefined`. `??` meneruskan string kosong itu apa adanya,
+ * dan `new URL("")` melempar `ERR_INVALID_URL` di setiap permintaan.
  */
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
 const META = {
   id: {
