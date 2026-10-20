@@ -9,6 +9,10 @@ tersebut — bukan dari ingatan model.
 
 Tersedia dalam Bahasa Indonesia dan English.
 
+**Situs langsung:** <https://vestigia-topaz.vercel.app>
+**Dokumentasi lengkap:** [`submission/`](submission/) — konsep, dokumentasi teknis,
+dan log pengembangan.
+
 ---
 
 ## Masalah yang diangkat
@@ -29,40 +33,47 @@ Butuh Node 20 atau lebih baru.
 
 ```bash
 npm install
-npm run sync:heritage   # baca /3d-object, optimasi GLB, tulis manifest
 npm run dev             # server pengembangan
 npm run build           # type-check + build produksi
 npm run lint
 ```
 
-`npm run sync:heritage` berjalan otomatis sebelum `dev` dan `build`.
+Tidak ada langkah unduh asset terpisah: kelima belas model 3D (51,9 MB) ikut di
+dalam repository ini.
+
+**Kunci API tidak wajib.** Tanpa kunci, seluruh fitur AI tetap jalan dalam mode
+luring — jawabannya dirakit langsung dari basis pengetahuan situs dan ditandai
+sebagai mode luring. Untuk menghidupkan pemandu yang sesungguhnya, salin
+`.env.example` menjadi `.env.local` lalu isi salah satu kunci penyedia yang ada
+di sana.
 
 ---
 
 ## Cara kerja koleksi
 
-Koleksi tidak ditulis di dalam kode. Ia dibaca dari folder `/3d-object` di luar
-aplikasi:
+Koleksi tidak ditulis di dalam kode. Sebuah situs masuk koleksi aktif hanya
+kalau **dua-duanya** ada:
 
 ```
-3d-object/<benua>/<slug>.glb   →   npm run sync:heritage
-                                        │
-                                        ├─ optimasi Draco + resize texture
-                                        ├─ salin ke public/models/<benua>/
-                                        └─ tulis src/data/generated/asset-manifest.ts
+public/models/<benua>/<slug>.glb     model 3D-nya
+src/data/heritage/<slug>.ts          metadata-nya, ditulis tangan
 ```
 
-Sebuah situs masuk koleksi aktif hanya kalau **dua-duanya** ada: file GLB, dan
-file metadata di `src/data/heritage/<slug>.ts`. Punya salah satu saja tidak
-cukup — GLB tanpa metadata tidak ada yang bisa diceritakan, metadata tanpa GLB
-kehilangan inti pengalamannya. Keduanya gagal dengan diam di runtime dan berisik
-di terminal saat sync, bukan dengan crash.
+Punya salah satu saja tidak cukup — GLB tanpa metadata tidak ada yang bisa
+diceritakan, metadata tanpa GLB kehilangan inti pengalamannya. Keduanya gagal
+dengan diam di runtime dan berisik di terminal saat sync, bukan dengan crash.
 
 Konsekuensinya: menambah situs baru berarti menaruh satu file GLB dan menulis
 satu file data. Tidak ada kode aplikasi yang perlu diubah, dan benua tanpa isi
 tidak muncul di mana pun.
 
-Konvensi penamaan file ada di [`../3d-object/README.md`](../3d-object/README.md).
+`npm run sync:heritage` adalah langkah penyiapan, bukan syarat menjalankan. Ia
+mengambil GLB mentah dari folder penyiapan lokal kalau ada, mengoptimasinya
+(Draco + resize texture), menyalin hasilnya ke `public/models/`, dan menulis
+ulang `src/data/generated/asset-manifest.ts`. Kalau folder itu tidak ada — dan
+pada salinan repository ini memang tidak — ia melaporkannya lalu melewatkan
+dirinya tanpa menyentuh manifest. Ia berjalan otomatis sebelum `dev` dan
+`build`, jadi tidak perlu dipanggil sendiri.
 
 ---
 
@@ -72,16 +83,22 @@ Konvensi penamaan file ada di [`../3d-object/README.md`](../3d-object/README.md)
 src/
 ├─ app/                    rute App Router
 │  ├─ page.tsx             landing
-│  ├─ explore/             pemilih benua → koleksi per benua
+│  ├─ about/               latar dan batas karya
 │  ├─ heritage/[slug]/     penampil 3D — inti aplikasi
-│  ├─ compare/             perbandingan dua situs
-│  └─ api/ai/              route handler untuk fitur AI
+│  └─ api/ai/              route handler fitur AI
+│     ├─ guide/            pemandu budaya, terikat satu situs
+│     ├─ quiz/             soal dibangun dari data situs
+│     ├─ compare/          perbandingan dua situs
+│     └─ story/            narasi singkat
 ├─ components/
 │  ├─ three/               kanvas, model, hotspot, kontrol
+│  ├─ workspace/           tata letak tiga kolom halaman warisan
 │  ├─ heritage/            kartu, panel informasi, lini masa
 │  ├─ landing/             section landing page
 │  ├─ ai/                  panel pemandu, kuis, perbandingan
-│  └─ shell/               header, footer, ganti bahasa
+│  ├─ shell/               header, footer, ganti bahasa
+│  └─ ui/                  primitif tombol dan sejenisnya
+├─ concepts/a/             komponen penyusun landing
 ├─ data/
 │  ├─ types.ts             kontrak data yang dipenuhi setiap situs
 │  ├─ heritage/<slug>.ts   metadata per situs, ditulis tangan
@@ -89,7 +106,7 @@ src/
 │  └─ registry.ts          gabungan manifest × metadata
 └─ lib/
    ├─ three/               normalisasi model, penempelan hotspot
-   ├─ ai/                  adapter provider, grounding, prompt
+   ├─ ai/                  adapter provider, grounding, pagar cakupan
    └─ i18n/                kamus dan penyedia bahasa
 ```
 
@@ -130,8 +147,9 @@ Batasan ini disengaja, dan diuji secara eksplisit. Penjelasan yang terdengar
 meyakinkan tetapi salah lebih merugikan bagi pemahaman warisan budaya daripada
 tidak ada jawaban sama sekali.
 
-Tanpa kunci API terpasang, aplikasi tetap berfungsi penuh: jawaban dirakit
-langsung dari basis pengetahuan dan ditandai sebagai mode luring.
+Seluruh pemanggilan model terjadi di server; kunci tidak pernah sampai ke
+peramban. Cakupan dikunci berlapis, dan usaha membujuk pemandu keluar dari
+warisan budaya ditolak sebelum model dipanggil.
 
 ---
 
