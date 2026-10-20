@@ -55,3 +55,14 @@ next-env.d.ts
 # dipakai satu baris pun oleh aplikasi. Membiarkannya ter-commit hanya
 # menggemukkan repo. Perkakasnya tetap berfungsi penuh secara lokal.
 /.claude/
+
+# Paket kerja internal. Tidak pernah menjadi bagian dari repository ini.
+/_internal/
+
+# Versi PDF log pengembangan tidak dipublikasikan di sini; versi Markdown-nya
+# lengkap, di folder yang sama.
+/submission/pdf/02-AI-DEVELOPMENT-LOG.pdf
+
+# Konfigurasi perkakas penulis, bukan bagian dari produk. Sama alasannya dengan
+# /.claude/ di atas: ia tidak dipakai satu baris pun oleh aplikasi.
+.mcp.json
